@@ -1,0 +1,28 @@
+{
+  "settings": {
+    "auto_copy": false,
+    "auto_copy_prompt": true
+  },
+  "providers": {
+    "openai": {
+      "api_key": "sk-proj-YOUR_OPENAI_API_KEY_HERE",
+      "model": "gpt-4",
+      "enabled": true
+    },
+    "anthropic": {
+      "api_key": "sk-ant-YOUR_ANTHROPIC_API_KEY_HERE", 
+      "model": "claude-3-sonnet-20240229",
+      "enabled": false
+    },
+    "google": {
+      "api_key": "YOUR_GOOGLE_AI_API_KEY_HERE",
+      "model": "gemini-2.5-pro",
+      "enabled": false
+    },
+    "ollama": {
+      "host": "http://localhost:11434",
+      "model": "llama2:7b",
+      "enabled": false
+    }
+  }
+} 

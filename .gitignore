@@ -1,0 +1,40 @@
+# AI Configuration with API keys
+my-ai-config.json
+**/config.json
+**/ai-config.json
+**/*api-key*
+
+# Temporary files
+*.tmp
+*.temp
+/tmp/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Docker
+.dockerignore
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+
+# Shell history
+.bash_history
+.zsh_history
+
+# AI response cache
+**/last_response.txt
+**/context.tmp 
