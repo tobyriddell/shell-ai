@@ -1,3 +1,26 @@
+```
+ ██████╗██╗  ██╗███████╗██╗     ██╗         █████╗ ██╗
+██╔════╝██║  ██║██╔════╝██║     ██║        ██╔══██╗██║
+███████╗███████║█████╗  ██║     ██║        ███████║██║
+╚════██║██╔══██║██╔══╝  ██║     ██║        ██╔══██║██║
+███████║██║  ██║███████╗███████╗███████╗   ██║  ██║██║
+╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝   ╚═╝  ╚═╝╚═╝
+```
+<div align="center">
+
+**🤖 AI-Enhanced Shell Environment 🤖**
+
+*Seamlessly integrate multiple AI providers with your command-line workflow*
+
+[![Shell](https://img.shields.io/badge/Shell-Bash-green?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.gnu.org/software/bash/)
+[![AI](https://img.shields.io/badge/AI-Multi--Provider-blue?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
+[![tmux](https://img.shields.io/badge/tmux-Integrated-red?style=for-the-badge&logo=tmux&logoColor=white)](https://github.com/tmux/tmux)
+
+</div>
+
+---
+
 # Shell AI Integration
 
 An AI-enhanced shell environment that seamlessly integrates multiple AI providers with your command-line workflow. Get intelligent assistance, command explanations, and context-aware suggestions directly in your terminal.
