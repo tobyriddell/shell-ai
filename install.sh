@@ -19,6 +19,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo -e "${BLUE}=== Shell AI Integration Installer ===${NC}"
 echo
 
+# Function to detect user's shell
+detect_shell() {
+    local user_shell=$(basename "$SHELL")
+    echo "$user_shell"
+}
+
 # Function to compare version strings
 version_compare() {
     local version1=$1
@@ -66,7 +72,21 @@ check_dependencies() {
     # Check for required commands
     command -v curl >/dev/null 2>&1 || missing_deps+=("curl")
     command -v jq >/dev/null 2>&1 || missing_deps+=("jq")
-    command -v bash >/dev/null 2>&1 || missing_deps+=("bash")
+    
+    # Check for supported shells
+    local shell_found=false
+    if command -v bash >/dev/null 2>&1; then
+        shell_found=true
+        echo -e "${GREEN}✓ bash found${NC}"
+    fi
+    if command -v zsh >/dev/null 2>&1; then
+        shell_found=true
+        echo -e "${GREEN}✓ zsh found${NC}"
+    fi
+    
+    if [[ "$shell_found" == false ]]; then
+        missing_deps+=("bash or zsh")
+    fi
     
     if [[ ${#missing_deps[@]} -gt 0 ]]; then
         echo -e "${RED}Missing required dependencies: ${missing_deps[*]}${NC}"
@@ -126,10 +146,7 @@ install_config() {
     echo -e "${YELLOW}Installing configuration files...${NC}"
     
     # Install tmux config
-    if [[ -f "$SCRIPT_DIR/config/tmux.conf" ]]; then
-        cp "$SCRIPT_DIR/config/tmux.conf" "$HOME/.tmux.conf"
-        echo -e "${GREEN}✓ tmux configuration installed${NC}"
-    fi
+    install_tmux_config
     
     # Install AI config template
     if [[ -f "$SCRIPT_DIR/config/ai-config.json" ]] && [[ ! -f "$INSTALL_DIR/config.json" ]]; then
@@ -139,10 +156,65 @@ install_config() {
     fi
 }
 
+# Install tmux configuration with smart handling of existing configs
+install_tmux_config() {
+    if [[ ! -f "$SCRIPT_DIR/config/tmux.conf" ]]; then
+        echo -e "${YELLOW}⚠ tmux.conf not found in source, skipping${NC}"
+        return
+    fi
+    
+    local tmux_conf_path="$HOME/.tmux.conf"
+    local ai_marker="# Shell AI Integration - Auto-generated"
+    
+    # Check if tmux.conf already exists
+    if [[ -f "$tmux_conf_path" ]]; then
+        # Check if Shell AI integration is already installed
+        if grep -q "$ai_marker" "$tmux_conf_path" 2>/dev/null; then
+            echo -e "${YELLOW}⚠ Shell AI tmux integration already installed${NC}"
+            return
+        fi
+        
+        echo -e "${YELLOW}Existing tmux.conf detected, appending Shell AI integration...${NC}"
+        
+        # Extract AI-specific configuration from source tmux.conf
+        # This is more reliable than trying to escape strings in heredoc
+        {
+            echo ""
+            echo "$ai_marker"
+            # Extract lines from "# AI Integration keybindings" to end of file
+            sed -n '/^# AI Integration keybindings/,$p' "$SCRIPT_DIR/config/tmux.conf"
+        } >> "$tmux_conf_path"
+        
+        echo -e "${GREEN}✓ Shell AI tmux integration appended to existing configuration${NC}"
+    else
+        # No existing tmux.conf, install the full configuration
+        cp "$SCRIPT_DIR/config/tmux.conf" "$tmux_conf_path"
+        echo -e "${GREEN}✓ tmux configuration installed${NC}"
+    fi
+}
+
+# Install shell integration
+install_shell_integration() {
+    local user_shell=$(detect_shell)
+    echo -e "${YELLOW}Installing $user_shell integration...${NC}"
+    
+    case "$user_shell" in
+        "bash")
+            install_bash_integration
+            ;;
+        "zsh")
+            install_zsh_integration
+            ;;
+        *)
+            echo -e "${YELLOW}⚠ Unsupported shell: $user_shell${NC}"
+            echo -e "${YELLOW}  Attempting bash integration as fallback${NC}"
+            install_bash_integration
+            ;;
+    esac
+}
+
 # Install bash integration
 install_bash_integration() {
-    echo -e "${YELLOW}Installing bash integration...${NC}"
-    
     # Check if already installed
     if grep -q "# Shell AI Integration" "$HOME/.bashrc" 2>/dev/null; then
         echo -e "${YELLOW}⚠ Bash integration already installed${NC}"
@@ -167,6 +239,35 @@ EOF
     if [[ -f "$SCRIPT_DIR/config/bashrc-ai.sh" ]]; then
         cp "$SCRIPT_DIR/config/bashrc-ai.sh" "$INSTALL_DIR/"
         echo -e "${GREEN}✓ Bash integration installed${NC}"
+    fi
+}
+
+# Install zsh integration
+install_zsh_integration() {
+    # Check if already installed
+    if grep -q "# Shell AI Integration" "$HOME/.zshrc" 2>/dev/null; then
+        echo -e "${YELLOW}⚠ Zsh integration already installed${NC}"
+        return
+    fi
+    
+    # Add to zshrc
+    cat >> "$HOME/.zshrc" << 'EOF'
+
+# Shell AI Integration
+if [[ -f ~/.config/shell-ai/zshrc-ai.sh ]]; then
+    source ~/.config/shell-ai/zshrc-ai.sh
+fi
+
+# Show welcome message on login (comment out if not desired)
+if [[ -f ~/.config/shell-ai/welcome.sh ]]; then
+    ~/.config/shell-ai/welcome.sh
+fi
+EOF
+    
+    # Copy zsh integration script
+    if [[ -f "$SCRIPT_DIR/config/zshrc-ai.sh" ]]; then
+        cp "$SCRIPT_DIR/config/zshrc-ai.sh" "$INSTALL_DIR/"
+        echo -e "${GREEN}✓ Zsh integration installed${NC}"
     fi
 }
 
@@ -211,14 +312,21 @@ main() {
     create_directories
     install_scripts
     install_config
-    install_bash_integration
+    install_shell_integration
     install_atuin
+    
+    local user_shell=$(detect_shell)
     
     echo
     echo -e "${GREEN}=== Installation Complete! ===${NC}"
+    echo -e "Configured for: ${BLUE}$user_shell${NC}"
     echo
     echo "Next steps:"
-    echo "1. Reload your bash configuration: source ~/.bashrc"
+    if [[ "$user_shell" == "zsh" ]]; then
+        echo "1. Reload your shell configuration: source ~/.zshrc"
+    else
+        echo "1. Reload your shell configuration: source ~/.bashrc"
+    fi
     echo "2. Configure AI providers: ai-setup"
     echo "3. Test the integration: ai-test"
     echo
@@ -230,7 +338,7 @@ main() {
     echo "  ai-last  # explain last command"
     echo "  ai-fix   # fix last failed command"
     echo
-    echo "Documentation: $INSTALL_DIR/README.md"
+    echo "Documentation: docs/USAGE.md"
 }
 
 main "$@" 

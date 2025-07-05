@@ -5,32 +5,64 @@ An AI-enhanced shell environment that seamlessly integrates multiple AI provider
 ## 🚀 Features
 
 - **Multi-Provider AI Support**: OpenAI, Anthropic, Google Gemini, and Ollama
+- **Multi-Shell Support**: Native bash and zsh integration with shell-specific optimizations
 - **Smart Context Capture**: Automatically includes shell history (via atuin) and tmux pane content
 - **Two Prompt Methods**: 
   - `@` prefix for quick queries: `@how do I find large files`
   - Dedicated tmux pane for AI interactions
 - **Response Management**: AI output can be extracted and executed safely
 - **Enhanced History**: Integrates with atuin for superior command history
-- **Docker Development Environment**: Pre-configured development container
+- **Docker Development Environment**: Pre-configured containers for both bash and zsh
 
 ## 📋 Quick Start
 
 ### Option 1: Using Docker (Recommended for Development)
 
+**Using the Makefile (Recommended):**
 1. **Clone and Build**:
    ```bash
    git clone <repository-url>
    cd shell-ai
-   docker build -t shell-ai .
+   
+   # Build and run bash environment
+   make run-bash
+   
+   # Build and run zsh environment
+   make run-zsh
+   
+   # Build both images
+   make all
    ```
 
-2. **Run Docker container with Configuration (useful when doing development on this project)**:
+2. **Development workflow**:
+   ```bash
+   # Run with project mounted for development
+   make dev-bash    # or make dev-zsh
+   
+   # Run with configuration
+   make run-bash-config    # or make run-zsh-config
+   
+   # Run tests
+   make test
+   
+   # See all available targets
+   make help
+   ```
+
+**Manual Docker commands:**
+1. **For bash users**:
+   ```bash
+   docker build -f Dockerfile.bash -t shell-ai-bash .
+   docker run -it -v $(pwd)/config/ai-config.json:/home/shelluser/.config/shell-ai/config.json shell-ai-bash
+   ```
+
+2. **For zsh users**:
    ```bash
    # With persistent AI configuration
-   docker run -it -v $(pwd)/config/ai-config.json:/home/shelluser/.config/shell-ai/config.json shell-ai
+   docker run -it -v $(pwd)/config/ai-config.json:/home/shelluser/.config/shell-ai/config.json shell-ai-zsh
    
    # Or run and configure interactively
-   docker run -it shell-ai
+   docker run -it shell-ai-zsh
    ```
 
 3. **Configure AI Provider**:
@@ -46,7 +78,7 @@ An AI-enhanced shell environment that seamlessly integrates multiple AI provider
    cd shell-ai
    ```
 
-2. **Run Installer**:
+2. **Run Installer** (auto-detects bash/zsh):
    ```bash
    chmod +x install.sh
    ./install.sh
@@ -54,7 +86,9 @@ An AI-enhanced shell environment that seamlessly integrates multiple AI provider
 
 3. **Reload Shell**:
    ```bash
-   source ~/.bashrc
+   source ~/.bashrc  # for bash
+   # or
+   source ~/.zshrc   # for zsh
    ```
 
 4. **Configure AI Provider**:
@@ -64,34 +98,69 @@ An AI-enhanced shell environment that seamlessly integrates multiple AI provider
 
 ## 🐳 Docker Development Environment
 
-### Building the Image
+### Building the Images
 
+**Using Makefile (Recommended):**
 ```bash
-docker build -t shell-ai .
+# Build both images
+make all
+
+# Build specific image
+make bash    # Build bash image
+make zsh     # Build zsh image
+
+# Show available targets
+make help
+```
+
+**Manual Docker commands:**
+```bash
+# For bash
+docker build -f Dockerfile.bash -t shell-ai-bash .
+
+# For zsh
+docker build -f Dockerfile.zsh -t shell-ai-zsh .
 ```
 
 ### Running with Configuration
 
-To avoid reconfiguring AI providers each time, mount your configuration file:
+**Using Makefile:**
+```bash
+# Run with example configuration pre-mounted
+make run-bash-config    # For bash
+make run-zsh-config     # For zsh
+```
 
+**Manual approach:**
 ```bash
 # Create your config file
 cp config/ai-config.json my-ai-config.json
 # Edit my-ai-config.json with your API keys
 
 # Run with mounted config
-docker run -it -v $(pwd)/my-ai-config.json:/home/shelluser/.config/shell-ai/config.json shell-ai
+docker run -it -v $(pwd)/my-ai-config.json:/home/shelluser/.config/shell-ai/config.json shell-ai-bash
 ```
 
-### Persistent Development Setup
+### Development Setup
 
-For development work, you can mount the entire project directory:
+**Using Makefile:**
+```bash
+# Development environment with project mounted
+make dev-bash    # For bash development
+make dev-zsh     # For zsh development
 
+# Debug containers
+make shell-bash  # Open bash shell for debugging
+make shell-zsh   # Open zsh shell for debugging
+```
+
+**Manual approach:**
 ```bash
 docker run -it \
   -v $(pwd):/workspace \
-  -v $(pwd)/my-ai-config.json:/home/shelluser/.config/shell-ai/config.json \
-  shell-ai
+  -v $(pwd)/config/ai-config.example.json:/home/shelluser/.config/shell-ai/config.json \
+  -w /workspace \
+  shell-ai-bash
 ```
 
 ## 🔧 Configuration
@@ -187,22 +256,83 @@ ai-copy    # Interactive menu to:
 
 ```
 shell-ai/
-├── Dockerfile              # Docker development environment
+├── Dockerfile.bash         # Docker development environment (bash)
+├── Dockerfile.zsh          # Docker development environment (zsh)
+├── Makefile               # Build automation for Docker images
 ├── README.md               # This file
-├── install.sh             # Installation script for non-Docker
+├── install.sh             # Installation script (auto-detects shell)
+├── tests/                 # Unit tests for both bash and zsh
+│   ├── test_runner.sh     # Test runner for both shells
+│   ├── test_command_extraction.sh
+│   ├── test_ai_shell.sh
+│   ├── test_config_management.sh
+│   ├── test_tmux_integration.sh
+│   └── test_prefix_handling.sh
 ├── scripts/               # AI integration scripts
 │   ├── ai-setup.sh        # Provider configuration
-│   ├── ai-shell.sh        # Main AI integration
+│   ├── ai-shell.sh        # Main AI integration (shell-agnostic)
 │   ├── ai-copy.sh         # Response management
 │   ├── tmux-ai-pane.sh    # tmux AI pane helper
 │   └── welcome.sh         # Welcome message
 ├── config/                # Configuration files
 │   ├── tmux.conf          # tmux configuration
-│   ├── bashrc-ai.sh       # Bash AI integration
-│   └── ai-config.json     # AI provider template
-└── docs/                  # Additional documentation
+│   ├── bashrc-ai.sh       # bash shell integration
+│   ├── zshrc-ai.sh        # zsh shell integration
+│   ├── ai-config.json     # AI provider configuration template
+│   └── ai-config.example.json
+└── docs/
     └── USAGE.md           # Detailed usage guide
+
 ```
+
+## 🧪 Testing
+
+The project includes comprehensive unit tests for both bash and zsh shells:
+
+### Run All Tests
+
+```bash
+# Run tests for both shells
+./tests/test_runner.sh
+```
+
+### Docker Testing
+
+**Using Makefile:**
+```bash
+# Run tests for both shells
+make test
+
+# Test specific shell
+make test-bash
+make test-zsh
+```
+
+**Manual commands:**
+```bash
+# Test zsh integration
+docker build -f Dockerfile.zsh -t shell-ai-zsh .
+docker run shell-ai-zsh ./tests/test_runner.sh
+
+# Test bash integration  
+docker build -f Dockerfile.bash -t shell-ai-bash .
+docker run shell-ai-bash ./tests/test_runner.sh
+```
+
+### Test Coverage
+
+Tests verify:
+- **Command Extraction**: `@` prefix parsing and argument handling
+- **AI Shell Functions**: Help display, context building, prompt processing
+- **Configuration Management**: JSON parsing, provider settings, validation
+- **tmux Integration**: Pane capture, split commands, key bindings
+- **Shell-Specific Features**: History handling differences between bash/zsh
+
+### Prerequisites for Native Testing
+
+- bash and zsh installed
+- jq for JSON processing
+- curl for API testing (mocked in tests)
 
 ## 🔧 Dependencies
 
@@ -305,10 +435,27 @@ tmux list-keys      # Show tmux keybindings
 
 ### Development Workflow
 
+**Using Makefile:**
+```bash
+# Quick development cycle
+make dev-bash    # Start development container
+make test        # Run all tests
+make clean       # Clean up images
+
+# CI/CD pipeline
+make ci          # Full build and test pipeline
+
+# Utility commands
+make images      # List built images
+make size        # Show image sizes
+make check       # Verify project structure
+```
+
+**Manual workflow:**
 ```bash
 # Build and test
-docker build -t shell-ai-dev .
-docker run -it -v $(pwd):/workspace shell-ai-dev
+docker build -f Dockerfile.bash -t shell-ai-bash .
+docker run -it -v $(pwd):/workspace shell-ai-bash
 
 # Test installation script
 ./install.sh --dry-run

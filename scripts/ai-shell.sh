@@ -41,7 +41,17 @@ get_shell_history() {
     if command -v atuin >/dev/null 2>&1; then
         atuin history list | tail -n "$MAX_HISTORY_LINES" 2>/dev/null || echo "No atuin history available"
     else
-        tail -n "$MAX_HISTORY_LINES" ~/.bash_history 2>/dev/null || echo "No shell history available"
+        # Detect shell type and use appropriate history command
+        if [[ -n "$ZSH_VERSION" ]]; then
+            # Zsh history using fc command
+            fc -l -"$MAX_HISTORY_LINES" 2>/dev/null | sed 's/^[[:space:]]*[0-9]*[[:space:]]*//' || echo "No zsh history available"
+        elif [[ -n "$BASH_VERSION" ]]; then
+            # Bash history from history file
+            tail -n "$MAX_HISTORY_LINES" ~/.bash_history 2>/dev/null || echo "No bash history available"
+        else
+            # Generic fallback
+            tail -n "$MAX_HISTORY_LINES" ~/.sh_history 2>/dev/null || echo "No shell history available"
+        fi
     fi
 }
 
