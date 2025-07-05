@@ -252,6 +252,29 @@ ai-copy    # Interactive menu to:
            # 4. Copy commands to clipboard
 ```
 
+## 🧪 Testing
+
+The project includes comprehensive unit tests covering all major functionality. Tests use mocking to avoid actual AI API calls and external dependencies.
+
+**For developers**: See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed testing instructions, development setup, and contribution guidelines.
+
+### Quick Test Run
+
+```bash
+# Run all tests (Linux/macOS)
+bash tests/test_runner.sh
+
+# Run tests in Docker (Cross-platform)
+docker build -t shell-ai-test .
+docker run --rm shell-ai-test bash tests/test_runner.sh
+
+# Run tests on Windows (WSL2/Git Bash)
+cd /mnt/c/path/to/shell-ai  # WSL2
+# or
+cd /c/path/to/shell-ai      # Git Bash
+bash tests/test_runner.sh
+```
+
 ## 📁 Project Structure
 
 ```
@@ -276,11 +299,16 @@ shell-ai/
 │   └── welcome.sh         # Welcome message
 ├── config/                # Configuration files
 │   ├── tmux.conf          # tmux configuration
-│   ├── bashrc-ai.sh       # bash shell integration
-│   ├── zshrc-ai.sh        # zsh shell integration
-│   ├── ai-config.json     # AI provider configuration template
-│   └── ai-config.example.json
-└── docs/
+│   ├── bashrc-ai.sh       # Bash integration (@ prefix)
+│   └── ai-config.example.json  # Example configuration
+├── tests/                 # Unit test suite
+│   ├── test_runner.sh     # Main test runner
+│   ├── test_command_extraction.sh  # Command parsing tests
+│   ├── test_ai_shell.sh   # AI integration tests
+│   ├── test_config_management.sh   # Configuration tests
+│   ├── test_tmux_integration.sh    # tmux functionality tests
+│   └── test_prefix_handling.sh     # @ prefix tests
+└── docs/                  # Additional documentation
     └── USAGE.md           # Detailed usage guide
 
 ```

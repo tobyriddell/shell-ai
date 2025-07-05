@@ -47,5 +47,6 @@ node_modules/
 .dockerignore
 docker-compose.override.yml
 
-# Make artifacts
-.make/ 
+# AI response cache
+**/last_response.txt
+**/context.tmp 
