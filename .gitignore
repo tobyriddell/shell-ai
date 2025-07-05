@@ -1,16 +1,32 @@
-# AI Configuration with API keys
-my-ai-config.json
-**/config.json
-**/ai-config.json
-**/*api-key*
+# API keys and sensitive configuration
+config.json
+my-*.json
+*-config.json
+*.key
 
-# Temporary files
+# Environment files
+.env
+.env.local
+.env.production
+
+# Shell history and temporary files
+.bash_history
+.zsh_history
 *.tmp
 *.temp
-/tmp/
 
-# OS specific files
+# Test artifacts
+tests/temp/
+tests/logs/
+test-*.log
+
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
 # Editor files
@@ -20,21 +36,16 @@ Thumbs.db
 *.swo
 *~
 
-# Docker
-.dockerignore
-
 # Logs
 *.log
 logs/
 
-# Environment variables
-.env
-.env.local
+# Node modules (if any JavaScript tooling is added)
+node_modules/
 
-# Shell history
-.bash_history
-.zsh_history
+# Docker build artifacts
+.dockerignore
+docker-compose.override.yml
 
-# AI response cache
-**/last_response.txt
-**/context.tmp 
+# Make artifacts
+.make/ 

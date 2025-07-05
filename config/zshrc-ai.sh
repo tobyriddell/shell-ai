@@ -1,4 +1,4 @@
-# AI Integration Functions
+# AI Integration Functions for Zsh
 export PATH="$HOME/.config/shell-ai:$PATH"
 
 # AI command prefix handler
@@ -42,9 +42,11 @@ alias ai-context='$HOME/.config/shell-ai/ai-shell.sh --context'
 alias ai-test='$HOME/.config/shell-ai/ai-shell.sh --test'
 alias ai-pane='$HOME/.config/shell-ai/tmux-ai-pane.sh'
 
-# Enhanced command_not_found_handle for AI prefix
-command_not_found_handle() {
+# Enhanced command_not_found_handler for AI prefix (note: zsh uses command_not_found_handler)
+command_not_found_handler() {
     local cmd="$1"
+
+    echo "command_not_found_handler called with cmd: $cmd" > /tmp/log2
     
     # Check if command starts with @ (AI prefix)
     if [[ "$cmd" == @* ]]; then
@@ -65,7 +67,7 @@ command_not_found_handle() {
     fi
     
     # Default behavior for other commands
-    echo "bash: $cmd: command not found"
+    echo "zsh: command not found: $cmd"
     return 127
 }
 
@@ -75,10 +77,13 @@ ai-last() {
     if command -v atuin >/dev/null 2>&1; then
         last_cmd=$(atuin history list --limit 1 | head -n1)
     else
-        last_cmd=$(history | tail -n1 | sed 's/^[ ]*[0-9]*[ ]*//')
+        # Zsh uses fc for history
+        last_cmd=$(fc -ln -1)
     fi
     
     if [[ -n "$last_cmd" ]]; then
+        # Trim leading whitespace from zsh history
+        last_cmd=$(echo "$last_cmd" | sed 's/^[[:space:]]*//')
         $HOME/.config/shell-ai/ai-shell.sh "Explain this command: $last_cmd"
     else
         echo "No recent command found"
@@ -98,15 +103,29 @@ ai-fix() {
     if command -v atuin >/dev/null 2>&1; then
         last_cmd=$(atuin history list --limit 1 | head -n1)
     else
-        last_cmd=$(history | tail -n1 | sed 's/^[ ]*[0-9]*[ ]*//')
+        # Zsh uses fc for history
+        last_cmd=$(fc -ln -1)
     fi
     
     if [[ -n "$last_cmd" ]]; then
+        # Trim leading whitespace from zsh history
+        last_cmd=$(echo "$last_cmd" | sed 's/^[[:space:]]*//')
         $HOME/.config/shell-ai/ai-shell.sh "The command '$last_cmd' failed. Please suggest how to fix it or provide the correct command."
     else
         echo "No recent command found"
     fi
 }
+
+# Enable zsh autoloading for better function handling
+autoload -Uz compinit
+compinit
+
+# Set up zsh options for better history handling
+setopt HIST_IGNORE_DUPS
+setopt HIST_IGNORE_SPACE
+setopt HIST_VERIFY
+setopt SHARE_HISTORY
+setopt APPEND_HISTORY
 
 alias ai-last='ai-last'
 alias ai-here='ai-here'
