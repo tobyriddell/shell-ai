@@ -13,6 +13,8 @@ RUN apt-get update && apt-get install -y \
     wget \
     git \
     neovim \
+    ripgrep \
+    bsdextrautils \
     build-essential \
     sudo \
     locales \
@@ -65,20 +67,20 @@ RUN echo 'eval "$(atuin init bash)"' >> /home/shelluser/.bashrc
 # Create AI integration directory
 RUN bash -c "mkdir -p ~/.config/shell-ai"
 
-# Copy AI integration scripts and make them executable
-COPY --chown=$USER:$USER --chmod=755 scripts/ai-setup.sh /home/shelluser/.config/shell-ai/
-COPY --chown=$USER:$USER --chmod=755 scripts/ai-shell.sh /home/shelluser/.config/shell-ai/
-COPY --chown=$USER:$USER --chmod=755 scripts/ai-copy.sh /home/shelluser/.config/shell-ai/
-COPY --chown=$USER:$USER --chmod=755 scripts/tmux-ai-pane.sh /home/shelluser/.config/shell-ai/
-COPY --chown=$USER:$USER --chmod=755 scripts/welcome.sh /home/shelluser/.config/shell-ai/
+# Copy entire repository content
+COPY --chown=$USER:$USER . /home/shelluser/
+
+# Copy AI integration scripts to expected location and make them executable
+RUN cp -r /home/shelluser/scripts/* /home/shelluser/.config/shell-ai/ && \
+    chmod +x /home/shelluser/.config/shell-ai/*.sh
+
+# Copy configuration files to expected locations
+RUN cp /home/shelluser/config/tmux.conf /home/shelluser/.tmux.conf && \
+    cp /home/shelluser/config/bashrc-ai.sh /home/shelluser/.config/shell-ai/ && \
+    cp /home/shelluser/config/ai-config.json /home/shelluser/.config/shell-ai/config.json
 
 # Verify scripts were copied correctly
 RUN ls -la /home/shelluser/.config/shell-ai/
-
-# Copy configuration files
-COPY --chown=$USER:$USER config/tmux.conf /home/shelluser/.tmux.conf
-COPY --chown=$USER:$USER config/bashrc-ai.sh /home/shelluser/.config/shell-ai/
-COPY --chown=$USER:$USER config/ai-config.json /home/shelluser/.config/shell-ai/config.json
 
 # Add AI integration to bash
 RUN bash -c "cat ~/.config/shell-ai/bashrc-ai.sh >> ~/.bashrc"
