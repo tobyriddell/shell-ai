@@ -21,14 +21,20 @@ This guide provides comprehensive documentation for using the Shell AI Integrati
 git clone <repository-url>
 cd shell-ai
 
-# Build image
-docker build -t shell-ai .
+# Build image (for bash)
+docker build -f Dockerfile.bash -t shell-ai-bash .
+
+# Build image (for zsh)
+docker build -f Dockerfile.zsh -t shell-ai-zsh .
 
 # Run with persistent configuration
 cp config/ai-config.json my-config.json
 # Edit my-config.json with your API keys
 
-docker run -it -v $(pwd)/my-config.json:/home/shelluser/.config/shell-ai/config.json shell-ai
+docker run -it -v $(pwd)/my-config.json:/home/shelluser/.config/shell-ai/config.json shell-ai-bash
+
+docker run -it -v $(pwd)/my-config.json:/home/shelluser/.config/shell-ai/config.json shell-ai-zsh
+
 ```
 
 ### Native Installation
