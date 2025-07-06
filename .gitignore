@@ -1,0 +1,52 @@
+# API keys and sensitive configuration
+config.json
+my-*.json
+*-config.json
+*.key
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Shell history and temporary files
+.bash_history
+.zsh_history
+*.tmp
+*.temp
+
+# Test artifacts
+tests/temp/
+tests/logs/
+test-*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Node modules (if any JavaScript tooling is added)
+node_modules/
+
+# Docker build artifacts
+.dockerignore
+docker-compose.override.yml
+
+# AI response cache
+**/last_response.txt
+**/context.tmp 
