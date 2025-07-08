@@ -163,7 +163,16 @@ install_tmux_config() {
         return
     fi
     
+    # Check for Oh my tmux! configuration paths
     local tmux_conf_path="$HOME/.tmux.conf"
+    if [[ -f "$HOME/.tmux.conf.local" ]]; then
+        tmux_conf_path="$HOME/.tmux.conf.local"
+        echo -e "${BLUE}Detected Oh my tmux! configuration: ~/.tmux.conf.local${NC}"
+    elif [[ -f "$HOME/.config/tmux/tmux.conf.local" ]]; then
+        tmux_conf_path="$HOME/.config/tmux/tmux.conf.local"
+        echo -e "${BLUE}Detected Oh my tmux! configuration: ~/.config/tmux/tmux.conf.local${NC}"
+    fi
+    
     local ai_marker="# Shell AI Integration - Auto-generated"
     
     # Check if tmux.conf already exists
