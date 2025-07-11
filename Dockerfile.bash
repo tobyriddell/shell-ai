@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     git \
     neovim \
+    asciinema \
     ripgrep \
     bsdextrautils \
     build-essential \
