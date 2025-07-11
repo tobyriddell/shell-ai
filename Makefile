@@ -68,8 +68,18 @@ test-zsh: zsh ## Build zsh image and run tests
 	@echo "Running tests in zsh container..."
 	docker run --rm $(ZSH_IMAGE):$(TAG) ./tests/test_runner.sh zsh
 
+.PHONY: test-install
+test-install: bash ## Build bash image and run installation tests
+	@echo "Running installation tests in bash container..."
+	docker run --rm $(BASH_IMAGE):$(TAG) ./tests/test_runner.sh install
+
+.PHONY: test-install-debug
+test-install-debug: bash ## Build bash image and run installation tests with debug output
+	@echo "Running installation tests in bash container (debug mode)..."
+	docker run --rm $(BASH_IMAGE):$(TAG) ./tests/test_runner.sh install debug
+
 .PHONY: test
-test: test-bash test-zsh ## Run tests in both bash and zsh containers
+test: test-bash test-zsh test-install ## Run all tests (bash, zsh, and installation)
 
 .PHONY: shell-bash
 shell-bash: bash ## Open bash shell in container for debugging

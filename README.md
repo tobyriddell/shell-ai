@@ -70,6 +70,8 @@ make test-zsh        # Test zsh only
 
 ### AI Provider Configuration
 
+> **⚠️ Note**: Only the Google LLM provider has been thoroughly tested - PRs are welcome for others!
+
 Edit `~/.config/shell-ai/config.json` or use `ai-setup`:
 
 ```json

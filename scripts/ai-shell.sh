@@ -39,7 +39,7 @@ show_help() {
 
 get_shell_history() {
     if command -v atuin >/dev/null 2>&1; then
-        atuin history list | tail -n "$MAX_HISTORY_LINES" 2>/dev/null || echo "No atuin history available"
+        atuin history list -s -f '{command}' | tail -n "$MAX_HISTORY_LINES" 2>/dev/null || echo "No atuin history available"
     else
         # Detect shell type and use appropriate history command
         if [[ -n "$ZSH_VERSION" ]]; then

@@ -179,12 +179,36 @@ run_shell_tests() {
     echo
 }
 
+# Run installation tests
+run_installation_tests() {
+    local debug_mode="$1"
+    echo -e "${BLUE}=== Running Installation Tests ===${NC}"
+    echo
+    
+    if [[ -x "tests/test_installation.sh" ]]; then
+        if [[ "$debug_mode" == "debug" ]]; then
+            bash tests/test_installation.sh debug
+        else
+            bash tests/test_installation.sh
+        fi
+    else
+        echo -e "${RED}Installation test script not found or not executable${NC}"
+        exit 1
+    fi
+}
+
 # Main test execution
 main() {
     local target_shell="$1"
     
     echo -e "${BLUE}=== Shell AI Integration Test Suite ===${NC}"
     echo
+    
+    # Check for special test modes
+    if [[ "$target_shell" == "install" ]]; then
+        run_installation_tests "$2"
+        return $?
+    fi
     
     # Determine which shells to test
     local shells_to_test=()
@@ -199,7 +223,8 @@ main() {
                 exit 1
             fi
         else
-            echo -e "${RED}Invalid shell '$target_shell'. Use 'bash' or 'zsh'${NC}"
+            echo -e "${RED}Invalid shell '$target_shell'. Use 'bash', 'zsh', or 'install'${NC}"
+            echo -e "${YELLOW}For installation tests with debug: 'install debug'${NC}"
             exit 1
         fi
     else
