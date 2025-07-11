@@ -61,7 +61,7 @@ Edit `~/.config/shell-ai/config.json`:
     },
     "google": {
       "api_key": "AIza...",
-      "model": "gemini-pro",
+      "model": "gemini-2.5-pro",
       "enabled": false
     },
     "ollama": {
