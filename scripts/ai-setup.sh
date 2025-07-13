@@ -34,83 +34,105 @@ show_menu() {
     echo
 }
 
-# Generic provider setup function
-setup_provider() {
-    local provider_key="$1"
-    local display_name="$2"
-    local default_model="$3"
-    local use_api_key="$4"  # true/false
-    local api_key_prompt="$5"
-    local host_prompt="$6"
-    local default_host="$7"
-    
-    echo -e "${GREEN}Setting up $display_name...${NC}"
-    read -p "Enable $display_name provider? (Y/n): " enable_choice
+# Provider-specific setup functions
+setup_openai() {
+    echo -e "${GREEN}Setting up OpenAI...${NC}"
+    read -p "Enable OpenAI provider? (Y/n): " enable_choice
     
     if [[ $enable_choice =~ ^[Nn]$ ]]; then
         # Disable the provider while preserving existing configuration
-        jq --arg provider "$provider_key" \
-           '.providers[$provider] = (.providers[$provider] // {}) | .providers[$provider].enabled = false' \
+        jq '.providers.openai = (.providers.openai // {}) | .providers.openai.enabled = false' \
            "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-        echo -e "${YELLOW}$display_name provider disabled (configuration preserved).${NC}"
+        echo -e "${YELLOW}OpenAI provider disabled (configuration preserved).${NC}"
     else
         # Enable and configure the provider
-        local config_obj='{"enabled": true}'
+        read -p "Enter model (default: gpt-3.5-turbo): " model
+        model=${model:-gpt-3.5-turbo}
         
-        # Always prompt for model
-        read -p "Enter model (default: $default_model): " model
-        model=${model:-$default_model}
+        read -p "Enter your OpenAI API key: " -s api_key
+        echo
         
-        # Only prompt for host if host_prompt is not empty
-        if [[ -n "$host_prompt" ]]; then
-            read -p "$host_prompt (default: $default_host): " host
-            host=${host:-$default_host}
-        fi
+        jq --arg key "$api_key" --arg model "$model" \
+           '.providers.openai = {"api_key": $key, "model": $model, "enabled": true}' \
+           "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
         
-        if [[ "$use_api_key" == "true" ]]; then
-            read -p "$api_key_prompt: " -s api_key
-            echo
-            
-            if [[ -n "$host" ]]; then
-                jq --arg provider "$provider_key" --arg key "$api_key" --arg model "$model" --arg host "$host" \
-                   '.providers[$provider] = {"api_key": $key, "model": $model, "host": $host, "enabled": true}' \
-                   "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-            else
-                jq --arg provider "$provider_key" --arg key "$api_key" --arg model "$model" \
-                   '.providers[$provider] = {"api_key": $key, "model": $model, "enabled": true}' \
-                   "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-            fi
-        else
-            if [[ -n "$host" ]]; then
-                jq --arg provider "$provider_key" --arg host "$host" --arg model "$model" \
-                   '.providers[$provider] = {"host": $host, "model": $model, "enabled": true}' \
-                   "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-            else
-                jq --arg provider "$provider_key" --arg model "$model" \
-                   '.providers[$provider] = {"model": $model, "enabled": true}' \
-                   "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-            fi
-        fi
-        
-        echo -e "${GREEN}$display_name configured and enabled successfully!${NC}"
+        echo -e "${GREEN}OpenAI configured and enabled successfully!${NC}"
     fi
 }
 
-# Provider-specific wrapper functions
-setup_openai() {
-    setup_provider "openai" "OpenAI" "gpt-3.5-turbo" "true" "Enter your OpenAI API key" "" ""
-}
-
 setup_anthropic() {
-    setup_provider "anthropic" "Anthropic" "claude-3-haiku-20240307" "true" "Enter your Anthropic API key" "" ""
+    echo -e "${GREEN}Setting up Anthropic...${NC}"
+    read -p "Enable Anthropic provider? (Y/n): " enable_choice
+    
+    if [[ $enable_choice =~ ^[Nn]$ ]]; then
+        # Disable the provider while preserving existing configuration
+        jq '.providers.anthropic = (.providers.anthropic // {}) | .providers.anthropic.enabled = false' \
+           "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+        echo -e "${YELLOW}Anthropic provider disabled (configuration preserved).${NC}"
+    else
+        # Enable and configure the provider
+        read -p "Enter model (default: claude-3-haiku-20240307): " model
+        model=${model:-claude-3-haiku-20240307}
+        
+        read -p "Enter your Anthropic API key: " -s api_key
+        echo
+        
+        jq --arg key "$api_key" --arg model "$model" \
+           '.providers.anthropic = {"api_key": $key, "model": $model, "enabled": true}' \
+           "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+        
+        echo -e "${GREEN}Anthropic configured and enabled successfully!${NC}"
+    fi
 }
 
 setup_google() {
-    setup_provider "google" "Google Gemini" "gemini-2.5-pro" "true" "Enter your Google AI API key" "" ""
+    echo -e "${GREEN}Setting up Google Gemini...${NC}"
+    read -p "Enable Google Gemini provider? (Y/n): " enable_choice
+    
+    if [[ $enable_choice =~ ^[Nn]$ ]]; then
+        # Disable the provider while preserving existing configuration
+        jq '.providers.google = (.providers.google // {}) | .providers.google.enabled = false' \
+           "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+        echo -e "${YELLOW}Google Gemini provider disabled (configuration preserved).${NC}"
+    else
+        # Enable and configure the provider
+        read -p "Enter model (default: gemini-2.5-pro): " model
+        model=${model:-gemini-2.5-pro}
+        
+        read -p "Enter your Google AI API key: " -s api_key
+        echo
+        
+        jq --arg key "$api_key" --arg model "$model" \
+           '.providers.google = {"api_key": $key, "model": $model, "enabled": true}' \
+           "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+        
+        echo -e "${GREEN}Google Gemini configured and enabled successfully!${NC}"
+    fi
 }
 
 setup_ollama() {
-    setup_provider "ollama" "Ollama (Local)" "llama2" "false" "" "Enter Ollama host" "http://localhost:11434"
+    echo -e "${GREEN}Setting up Ollama (Local)...${NC}"
+    read -p "Enable Ollama provider? (Y/n): " enable_choice
+    
+    if [[ $enable_choice =~ ^[Nn]$ ]]; then
+        # Disable the provider while preserving existing configuration
+        jq '.providers.ollama = (.providers.ollama // {}) | .providers.ollama.enabled = false' \
+           "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+        echo -e "${YELLOW}Ollama provider disabled (configuration preserved).${NC}"
+    else
+        # Enable and configure the provider
+        read -p "Enter model (default: llama2): " model
+        model=${model:-llama2}
+        
+        read -p "Enter Ollama host (default: http://localhost:11434): " host
+        host=${host:-http://localhost:11434}
+        
+        jq --arg host "$host" --arg model "$model" \
+           '.providers.ollama = {"host": $host, "model": $model, "enabled": true}' \
+           "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+        
+        echo -e "${GREEN}Ollama configured and enabled successfully!${NC}"
+    fi
 }
 
 setup_workflow() {
