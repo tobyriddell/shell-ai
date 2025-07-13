@@ -48,33 +48,48 @@ setup_provider() {
     read -p "Enable $display_name provider? (Y/n): " enable_choice
     
     if [[ $enable_choice =~ ^[Nn]$ ]]; then
-        # Disable the provider
+        # Disable the provider while preserving existing configuration
         jq --arg provider "$provider_key" \
-           '.providers[$provider] = {"enabled": false}' \
+           '.providers[$provider] = (.providers[$provider] // {}) | .providers[$provider].enabled = false' \
            "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-        echo -e "${YELLOW}$display_name provider disabled.${NC}"
+        echo -e "${YELLOW}$display_name provider disabled (configuration preserved).${NC}"
     else
         # Enable and configure the provider
         local config_obj='{"enabled": true}'
         
+        # Always prompt for model
+        read -p "Enter model (default: $default_model): " model
+        model=${model:-$default_model}
+        
+        # Only prompt for host if host_prompt is not empty
+        if [[ -n "$host_prompt" ]]; then
+            read -p "$host_prompt (default: $default_host): " host
+            host=${host:-$default_host}
+        fi
+        
         if [[ "$use_api_key" == "true" ]]; then
             read -p "$api_key_prompt: " -s api_key
             echo
-            read -p "Enter model (default: $default_model): " model
-            model=${model:-$default_model}
             
-            jq --arg provider "$provider_key" --arg key "$api_key" --arg model "$model" \
-               '.providers[$provider] = {"api_key": $key, "model": $model, "enabled": true}' \
-               "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+            if [[ -n "$host" ]]; then
+                jq --arg provider "$provider_key" --arg key "$api_key" --arg model "$model" --arg host "$host" \
+                   '.providers[$provider] = {"api_key": $key, "model": $model, "host": $host, "enabled": true}' \
+                   "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+            else
+                jq --arg provider "$provider_key" --arg key "$api_key" --arg model "$model" \
+                   '.providers[$provider] = {"api_key": $key, "model": $model, "enabled": true}' \
+                   "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+            fi
         else
-            read -p "$host_prompt (default: $default_host): " host
-            host=${host:-$default_host}
-            read -p "Enter model (default: $default_model): " model
-            model=${model:-$default_model}
-            
-            jq --arg provider "$provider_key" --arg host "$host" --arg model "$model" \
-               '.providers[$provider] = {"host": $host, "model": $model, "enabled": true}' \
-               "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+            if [[ -n "$host" ]]; then
+                jq --arg provider "$provider_key" --arg host "$host" --arg model "$model" \
+                   '.providers[$provider] = {"host": $host, "model": $model, "enabled": true}' \
+                   "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+            else
+                jq --arg provider "$provider_key" --arg model "$model" \
+                   '.providers[$provider] = {"model": $model, "enabled": true}' \
+                   "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+            fi
         fi
         
         echo -e "${GREEN}$display_name configured and enabled successfully!${NC}"
@@ -111,14 +126,14 @@ setup_workflow() {
     
     echo
     echo -e "${YELLOW}Current workflow settings:${NC}"
-    echo "Auto-launch ai-copy after AI responses: $current_auto_copy"
-    echo "Prompt before auto-launching ai-copy: $current_auto_copy_prompt"
+    echo "Auto-launch ai-copy after AI responses (tmux only): $current_auto_copy"
+    echo "Prompt before auto-launching ai-copy (tmux only): $current_auto_copy_prompt"
     echo
     
-    read -p "Auto-launch ai-copy after AI responses? (y/N): " auto_copy_choice
+    read -p "Auto-launch ai-copy after AI responses (tmux only)? (y/N): " auto_copy_choice
     if [[ $auto_copy_choice =~ ^[Yy]$ ]]; then
         auto_copy="true"
-        read -p "Prompt before auto-launching ai-copy? (Y/n): " prompt_choice
+        read -p "Prompt before auto-launching ai-copy (tmux only)? (Y/n): " prompt_choice
         if [[ $prompt_choice =~ ^[Nn]$ ]]; then
             auto_copy_prompt="false"
         else
