@@ -53,6 +53,7 @@ ENV LC_ALL=en_US.UTF-8
 
 # Create a non-root user
 RUN useradd -m -s /bin/bash $USER && \
+    chown -R $USER:$USER /home/$USER && \
     echo "$USER ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Switch to the user
@@ -61,9 +62,6 @@ WORKDIR $HOME
 
 # Install atuin
 RUN curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh
-
-# Configure bash to use atuin
-RUN echo 'eval "$(atuin init bash)"' >> /home/shelluser/.bashrc
 
 # Create AI integration directory
 RUN bash -c "mkdir -p ~/.config/shell-ai"
