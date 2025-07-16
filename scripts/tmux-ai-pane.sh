@@ -36,7 +36,9 @@ create_ai_pane() {
     tmux send-keys -t "$ai_pane" "echo '  exit           - Close this pane'" C-m
     tmux send-keys -t "$ai_pane" "echo" C-m
     
-    # Create aliases for the AI pane
+    # Source shell configuration and create aliases for the AI pane
+    tmux send-keys -t "$ai_pane" "source ~/.bashrc && source ~/.config/shell-ai/bashrc-ai.sh" C-m
+    tmux send-keys -t "$ai_pane" "export AI_SHELL_TMUX_INVOKED=1" C-m
     tmux send-keys -t "$ai_pane" "alias ai='~/.config/shell-ai/ai-shell.sh'" C-m
     tmux send-keys -t "$ai_pane" "alias ai-context='~/.config/shell-ai/ai-shell.sh --context'" C-m
     tmux send-keys -t "$ai_pane" "alias ai-copy='~/.config/shell-ai/ai-copy.sh'" C-m

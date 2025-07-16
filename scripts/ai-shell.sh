@@ -39,7 +39,14 @@ show_help() {
 
 get_shell_history() {
     if command -v atuin >/dev/null 2>&1; then
-        atuin history list -s -f '{command}' | tail -n "$MAX_HISTORY_LINES" 2>/dev/null || echo "No atuin history available"
+        # Check if invoked from tmux - if so, use global history instead of session-specific
+        if [[ -n "$AI_SHELL_TMUX_INVOKED" ]]; then
+            # Use global history when invoked from tmux (drop -s flag)
+            atuin history list -f '{command}' | tail -n "$MAX_HISTORY_LINES" 2>/dev/null || echo "No atuin history available"
+        else
+            # Use session-specific history for normal invocations
+            atuin history list -s -f '{command}' | tail -n "$MAX_HISTORY_LINES" 2>/dev/null || echo "No atuin history available"
+        fi
     else
         # Detect shell type and use appropriate history command
         if [[ -n "$ZSH_VERSION" ]]; then
