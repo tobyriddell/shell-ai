@@ -23,117 +23,68 @@ fi
 
 show_menu() {
     echo -e "${YELLOW}Available AI Providers:${NC}"
-    echo "1. OpenAI (GPT-3.5/GPT-4)"
-    echo "2. Anthropic (Claude)"
-    echo "3. Google (Gemini)"
-    echo "4. Ollama (Local)"
-    echo "5. Configure workflow settings"
-    echo "6. View current configuration"
-    echo "7. Test AI integration"
+    
+    # Dynamically discover available providers
+    local i=1
+    declare -g -A PROVIDER_MAP
+    
+    for provider_file in "$PROVIDERS_DIR"/*.sh; do
+        if [[ -f "$provider_file" ]]; then
+            provider_name=$(basename "$provider_file" .sh)
+            
+            # Check if setup function exists
+            if declare -f "setup_$provider_name" >/dev/null 2>&1; then
+                # Get provider description by sourcing the file in a subshell
+                provider_description=$(
+                    source "$provider_file"
+                    echo "${PROVIDER_DESCRIPTION:-$provider_name}"
+                )
+                
+                echo "$i. $provider_description"
+                PROVIDER_MAP[$i]="$provider_name"
+                ((i++))
+            fi
+        fi
+    done
+    
+    echo "$i. Configure workflow settings"
+    PROVIDER_MAP[$i]="workflow"
+    ((i++))
+    
+    echo "$i. View current configuration"
+    PROVIDER_MAP[$i]="view"
+    ((i++))
+    
+    echo "$i. Test AI integration"
+    PROVIDER_MAP[$i]="test"
+    
     echo "0. Exit"
     echo
 }
 
-# Provider-specific setup functions
-setup_openai() {
-    echo -e "${GREEN}Setting up OpenAI...${NC}"
-    read -p "Enable OpenAI provider? (Y/n): " enable_choice
+# Get script directory for loading providers
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROVIDERS_DIR="$SCRIPT_DIR/providers"
+
+# Load AI providers from providers directory
+load_providers() {
+    local providers_dir="$1"
     
-    if [[ $enable_choice =~ ^[Nn]$ ]]; then
-        # Disable the provider while preserving existing configuration
-        jq '.providers.openai = (.providers.openai // {}) | .providers.openai.enabled = false' \
-           "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-        echo -e "${YELLOW}OpenAI provider disabled (configuration preserved).${NC}"
-    else
-        # Enable and configure the provider
-        read -p "Enter model (default: gpt-3.5-turbo): " model
-        model=${model:-gpt-3.5-turbo}
-        
-        read -p "Enter your OpenAI API key: " -s api_key
-        echo
-        
-        jq --arg key "$api_key" --arg model "$model" \
-           '.providers.openai = {"api_key": $key, "model": $model, "enabled": true}' \
-           "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-        
-        echo -e "${GREEN}OpenAI configured and enabled successfully!${NC}"
+    if [[ ! -d "$providers_dir" ]]; then
+        echo -e "${RED}Error: Providers directory not found: $providers_dir${NC}" >&2
+        return 1
     fi
+    
+    # Load all provider files
+    for provider_file in "$providers_dir"/*.sh; do
+        if [[ -f "$provider_file" ]]; then
+            source "$provider_file"
+        fi
+    done
 }
 
-setup_anthropic() {
-    echo -e "${GREEN}Setting up Anthropic...${NC}"
-    read -p "Enable Anthropic provider? (Y/n): " enable_choice
-    
-    if [[ $enable_choice =~ ^[Nn]$ ]]; then
-        # Disable the provider while preserving existing configuration
-        jq '.providers.anthropic = (.providers.anthropic // {}) | .providers.anthropic.enabled = false' \
-           "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-        echo -e "${YELLOW}Anthropic provider disabled (configuration preserved).${NC}"
-    else
-        # Enable and configure the provider
-        read -p "Enter model (default: claude-3-haiku-20240307): " model
-        model=${model:-claude-3-haiku-20240307}
-        
-        read -p "Enter your Anthropic API key: " -s api_key
-        echo
-        
-        jq --arg key "$api_key" --arg model "$model" \
-           '.providers.anthropic = {"api_key": $key, "model": $model, "enabled": true}' \
-           "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-        
-        echo -e "${GREEN}Anthropic configured and enabled successfully!${NC}"
-    fi
-}
-
-setup_google() {
-    echo -e "${GREEN}Setting up Google Gemini...${NC}"
-    read -p "Enable Google Gemini provider? (Y/n): " enable_choice
-    
-    if [[ $enable_choice =~ ^[Nn]$ ]]; then
-        # Disable the provider while preserving existing configuration
-        jq '.providers.google = (.providers.google // {}) | .providers.google.enabled = false' \
-           "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-        echo -e "${YELLOW}Google Gemini provider disabled (configuration preserved).${NC}"
-    else
-        # Enable and configure the provider
-        read -p "Enter model (default: gemini-2.5-pro): " model
-        model=${model:-gemini-2.5-pro}
-        
-        read -p "Enter your Google AI API key: " -s api_key
-        echo
-        
-        jq --arg key "$api_key" --arg model "$model" \
-           '.providers.google = {"api_key": $key, "model": $model, "enabled": true}' \
-           "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-        
-        echo -e "${GREEN}Google Gemini configured and enabled successfully!${NC}"
-    fi
-}
-
-setup_ollama() {
-    echo -e "${GREEN}Setting up Ollama (Local)...${NC}"
-    read -p "Enable Ollama provider? (Y/n): " enable_choice
-    
-    if [[ $enable_choice =~ ^[Nn]$ ]]; then
-        # Disable the provider while preserving existing configuration
-        jq '.providers.ollama = (.providers.ollama // {}) | .providers.ollama.enabled = false' \
-           "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-        echo -e "${YELLOW}Ollama provider disabled (configuration preserved).${NC}"
-    else
-        # Enable and configure the provider
-        read -p "Enter model (default: llama2): " model
-        model=${model:-llama2}
-        
-        read -p "Enter Ollama host (default: http://localhost:11434): " host
-        host=${host:-http://localhost:11434}
-        
-        jq --arg host "$host" --arg model "$model" \
-           '.providers.ollama = {"host": $host, "model": $model, "enabled": true}' \
-           "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-        
-        echo -e "${GREEN}Ollama configured and enabled successfully!${NC}"
-    fi
-}
+# Load providers at startup
+load_providers "$PROVIDERS_DIR"
 
 setup_workflow() {
     echo -e "${GREEN}Configuring workflow settings...${NC}"
@@ -208,15 +159,27 @@ while true; do
     read -p "Select an option: " choice
     
     case $choice in
-        1) setup_openai ;;
-        2) setup_anthropic ;;
-        3) setup_google ;;
-        4) setup_ollama ;;
-        5) setup_workflow ;;
-        6) view_config ;;
-        7) test_ai ;;
         0) echo -e "${GREEN}Setup complete!${NC}"; break ;;
-        *) echo -e "${RED}Invalid option. Please try again.${NC}" ;;
+        *)
+            if [[ -n "${PROVIDER_MAP[$choice]:-}" ]]; then
+                provider_choice="${PROVIDER_MAP[$choice]}"
+                case "$provider_choice" in
+                    "workflow") setup_workflow ;;
+                    "view") view_config ;;
+                    "test") test_ai ;;
+                    *) 
+                        # Call the provider's setup function
+                        if declare -f "setup_$provider_choice" >/dev/null 2>&1; then
+                            "setup_$provider_choice"
+                        else
+                            echo -e "${RED}Error: Setup function not found for $provider_choice${NC}"
+                        fi
+                        ;;
+                esac
+            else
+                echo -e "${RED}Invalid option. Please try again.${NC}"
+            fi
+            ;;
     esac
     echo
 done 

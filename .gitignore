@@ -15,6 +15,9 @@ my-*.json
 *.tmp
 *.temp
 
+# Makefile build stamps
+*.stamp
+
 # Test artifacts
 tests/temp/
 tests/logs/

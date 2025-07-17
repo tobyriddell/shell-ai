@@ -141,6 +141,35 @@ install_scripts() {
     done
 }
 
+# Install provider files
+install_providers() {
+    echo -e "${YELLOW}Installing AI providers...${NC}"
+    
+    # Create providers directory
+    mkdir -p "$INSTALL_DIR/providers"
+    
+    # Copy all provider files
+    if [[ -d "$SCRIPT_DIR/providers" ]]; then
+        local provider_count=0
+        for provider_file in "$SCRIPT_DIR/providers"/*.sh; do
+            if [[ -f "$provider_file" ]]; then
+                cp "$provider_file" "$INSTALL_DIR/providers/"
+                chmod +x "$INSTALL_DIR/providers/$(basename "$provider_file")"
+                echo -e "${GREEN}✓ Installed provider: $(basename "$provider_file")${NC}"
+                ((++provider_count))
+            fi
+        done
+        
+        if [[ $provider_count -eq 0 ]]; then
+            echo -e "${YELLOW}⚠ No provider files found in $SCRIPT_DIR/providers${NC}"
+        else
+            echo -e "${GREEN}✓ Installed $provider_count AI providers${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠ Providers directory not found: $SCRIPT_DIR/providers${NC}"
+    fi
+}
+
 # Install configurations
 install_config() {
     echo -e "${YELLOW}Installing configuration files...${NC}"
@@ -320,6 +349,7 @@ main() {
     check_dependencies
     create_directories
     install_scripts
+    install_providers
     install_config
     install_shell_integration
     install_atuin
