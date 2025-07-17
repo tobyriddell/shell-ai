@@ -27,6 +27,12 @@ source ~/.bashrc
 source ~/.zshrc
 ```
 
+The installation process will:
+1. Install main scripts to `~/.config/shell-ai/`
+2. Install AI provider modules to `~/.config/shell-ai/providers/`
+3. Set up shell integration (bashrc/zshrc)
+4. Configure tmux integration (if tmux is available)
+
 ### Docker (Development)
 
 ```bash
@@ -44,6 +50,28 @@ ai-setup
 # Secure config file
 chmod 600 ~/.config/shell-ai/config.json
 ```
+
+### Modular Architecture
+
+The shell-ai system uses a runtime provider loading architecture:
+
+```
+~/.config/shell-ai/
+├── ai-shell.sh         # Main shell integration
+├── ai-setup.sh         # Configuration script
+├── providers/          # AI provider modules
+│   ├── openai.sh
+│   ├── anthropic.sh
+│   ├── google.sh
+│   └── ollama.sh
+└── config.json         # Configuration file
+```
+
+**Key benefits:**
+- **Environment-specific deployments**: Include only needed providers
+- **No build step**: Providers are loaded at runtime
+- **Easy customization**: Add custom providers by creating new files
+- **Secure isolation**: Provider code can be kept separate per environment
 
 Edit `~/.config/shell-ai/config.json`:
 ```json
@@ -170,6 +198,147 @@ tmux source-file ~/.tmux.conf
 
 # Debug
 ai --context
+```
+
+### zsh Globbing Issues
+
+**Problem**: In zsh, special characters like `?` and `*` in prompts can cause globbing errors:
+```bash
+ai What is the speed of light?
+# Error: zsh: no matches found: light?
+```
+
+**Solutions** (choose one):
+
+#### Option 1: Quote Your Prompts (Immediate Fix)
+Always quote prompts containing special characters:
+```bash
+ai "What is the speed of light?"
+ai 'How do I use wildcards like * and ?'
+```
+
+#### Option 2: Configure zsh to Handle Unmatched Patterns (Recommended)
+Add this line to your `~/.zshrc` or to `~/.config/shell-ai/zshrc-ai.sh`:
+```bash
+# Prevent zsh from failing on unmatched glob patterns
+setopt nonomatch
+```
+
+This makes zsh treat unmatched glob patterns as literal strings (similar to bash behavior).
+
+#### Option 3: Alternative zsh Options
+Other zsh configuration options:
+```bash
+setopt nullglob     # Unmatched patterns expand to nothing
+setopt noglobsubst  # Disable glob expansion in substitution
+```
+
+#### Option 4: Use Alternative Input Methods
+```bash
+# Pipe input to avoid globbing
+echo "What is the speed of light?" | ai
+
+# Use here-string
+ai <<< "What is the speed of light?"
+```
+
+**Recommendation**: Use Option 2 (`setopt nonomatch`) for the best user experience, as it automatically handles the issue without requiring users to change their input habits.
+
+## Creating Custom Providers
+
+You can create custom AI providers by creating new files in the `providers/` directory.
+
+### Provider Template
+
+Create `~/.config/shell-ai/providers/custom.sh`:
+
+```bash
+#!/bin/bash
+# Custom AI Provider
+
+# Provider metadata
+PROVIDER_NAME="Custom"
+PROVIDER_DESCRIPTION="Custom AI Provider"
+
+# API call function
+call_custom() {
+    local provider_config="$1"
+    local prompt="$2"
+    
+    # Extract parameters from config
+    local api_key model endpoint
+    api_key=$(echo "$provider_config" | jq -r '.api_key')
+    model=$(echo "$provider_config" | jq -r '.model')
+    endpoint=$(echo "$provider_config" | jq -r '.endpoint // "https://api.example.com/v1/chat"')
+    
+    # Implement your API call here
+    curl -s -X POST "$endpoint" \
+        -H "Authorization: Bearer $api_key" \
+        -H "Content-Type: application/json" \
+        -d "{
+            \"model\": \"$model\",
+            \"prompt\": $(echo "$prompt" | jq -R -s .),
+            \"max_tokens\": 2000
+        }" | jq -r '.response // .error // "Error: Invalid response"'
+}
+
+# Setup function
+setup_custom() {
+    echo -e "${GREEN}Setting up Custom Provider...${NC}"
+    read -p "Enable Custom provider? (Y/n): " enable_choice
+    
+    if [[ $enable_choice =~ ^[Nn]$ ]]; then
+        jq '.providers.custom = (.providers.custom // {}) | .providers.custom.enabled = false' \
+           "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+        echo -e "${YELLOW}Custom provider disabled.${NC}"
+    else
+        read -p "Enter API key: " -s api_key
+        echo
+        read -p "Enter model: " model
+        read -p "Enter endpoint (optional): " endpoint
+        
+        if [[ -n "$endpoint" ]]; then
+            jq --arg key "$api_key" --arg model "$model" --arg endpoint "$endpoint" \
+               '.providers.custom = {"api_key": $key, "model": $model, "endpoint": $endpoint, "enabled": true}' \
+               "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+        else
+            jq --arg key "$api_key" --arg model "$model" \
+               '.providers.custom = {"api_key": $key, "model": $model, "enabled": true}' \
+               "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+        fi
+        
+        echo -e "${GREEN}Custom provider configured!${NC}"
+    fi
+}
+```
+
+### Required Functions
+
+Every provider must implement:
+- `call_<provider>(provider_config, prompt)`: Handle API calls with standardized interface
+- `setup_<provider>()`: Handle configuration
+- `PROVIDER_NAME` and `PROVIDER_DESCRIPTION` variables
+
+**Provider Interface:**
+- `provider_config`: JSON object containing all provider configuration
+- `prompt`: The user's prompt/question
+- Each provider extracts what it needs from the config (api_key, model, host, etc.)
+
+### Environment-Specific Deployments
+
+For different environments:
+1. Include only the needed provider files
+2. The system automatically adapts to available providers
+3. No changes needed in main scripts
+
+Example for a minimal environment:
+```bash
+# Only include custom provider
+rm ~/.config/shell-ai/providers/openai.sh
+rm ~/.config/shell-ai/providers/anthropic.sh
+rm ~/.config/shell-ai/providers/google.sh
+rm ~/.config/shell-ai/providers/ollama.sh
+# Keep only custom.sh
 ```
 
 ## API Reference

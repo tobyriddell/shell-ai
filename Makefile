@@ -9,6 +9,16 @@ TAG := latest
 # Docker build context
 BUILD_CONTEXT := .
 
+# Source file dependencies
+SCRIPTS := $(wildcard scripts/*.sh) install.sh
+CONFIG := $(wildcard config/*.sh config/*.json config/tmux.conf)
+PROVIDERS := $(wildcard providers/*.sh)
+COMMON_DEPS := $(SCRIPTS) $(CONFIG) $(PROVIDERS)
+
+# Build stamp files
+BASH_STAMP := .bash-image-$(TAG).stamp
+ZSH_STAMP := .zsh-image-$(TAG).stamp
+
 # Default target
 .PHONY: help
 help: ## Show this help message
@@ -22,17 +32,34 @@ help: ## Show this help message
 .PHONY: all
 all: bash zsh ## Build both bash and zsh images
 
-.PHONY: bash
-bash: ## Build bash Docker image
+.PHONY: force-bash force-zsh force-all
+force-bash: ## Force rebuild bash image (ignore dependencies)
+	@rm -f $(BASH_STAMP)
+	@$(MAKE) bash
+
+force-zsh: ## Force rebuild zsh image (ignore dependencies) 
+	@rm -f $(ZSH_STAMP)
+	@$(MAKE) zsh
+
+force-all: ## Force rebuild both images (ignore dependencies)
+	@rm -f $(BASH_STAMP) $(ZSH_STAMP)
+	@$(MAKE) all
+
+# Build bash Docker image only when dependencies change
+bash: $(BASH_STAMP) ## Build bash Docker image
+$(BASH_STAMP): Dockerfile.bash $(COMMON_DEPS)
 	@echo "Building bash Docker image..."
 	docker build -f Dockerfile.bash -t $(BASH_IMAGE):$(TAG) $(BUILD_CONTEXT)
 	@echo "✓ Built $(BASH_IMAGE):$(TAG)"
+	@touch $(BASH_STAMP)
 
-.PHONY: zsh
-zsh: ## Build zsh Docker image
+# Build zsh Docker image only when dependencies change  
+zsh: $(ZSH_STAMP) ## Build zsh Docker image
+$(ZSH_STAMP): Dockerfile.zsh $(COMMON_DEPS)
 	@echo "Building zsh Docker image..."
 	docker build -f Dockerfile.zsh -t $(ZSH_IMAGE):$(TAG) $(BUILD_CONTEXT)
 	@echo "✓ Built $(ZSH_IMAGE):$(TAG)"
+	@touch $(ZSH_STAMP)
 
 .PHONY: run-bash
 run-bash: bash ## Build and run bash container interactively
@@ -110,11 +137,12 @@ dev-zsh: zsh ## Run zsh container with project mounted for development
 		$(ZSH_IMAGE):$(TAG)
 
 .PHONY: clean
-clean: ## Remove built Docker images
-	@echo "Removing Docker images..."
+clean: ## Remove built Docker images and build stamps
+	@echo "Removing Docker images and build stamps..."
 	-docker rmi $(BASH_IMAGE):$(TAG) 2>/dev/null || true
 	-docker rmi $(ZSH_IMAGE):$(TAG) 2>/dev/null || true
-	@echo "✓ Cleaned up images"
+	-rm -f $(BASH_STAMP) $(ZSH_STAMP)
+	@echo "✓ Cleaned up images and build stamps"
 
 .PHONY: check
 check: ## Check if Dockerfiles exist and are valid

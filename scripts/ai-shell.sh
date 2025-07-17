@@ -16,6 +16,10 @@ NC='\033[0m'
 MAX_HISTORY_LINES=50
 MAX_PANE_LINES=100
 
+# Get script directory for loading providers
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROVIDERS_DIR="$SCRIPT_DIR/providers"
+
 show_help() {
     echo -e "${BLUE}Shell AI Integration${NC}"
     echo
@@ -123,69 +127,25 @@ get_active_provider() {
     fi
 }
 
-call_openai() {
-    local api_key="$1"
-    local model="$2"
-    local prompt="$3"
+# Load AI providers from providers directory
+load_providers() {
+    local providers_dir="$1"
     
-    curl -s -X POST "https://api.openai.com/v1/chat/completions" \
-        -H "Authorization: Bearer $api_key" \
-        -H "Content-Type: application/json" \
-        -d "{
-            \"model\": \"$model\",
-            \"messages\": [
-                {\"role\": \"user\", \"content\": $(echo "$prompt" | jq -R -s .)}
-            ],
-            \"max_tokens\": 2000,
-            \"temperature\": 0.7
-        }" | jq -r '.choices[0].message.content // .error.message // "Error: Invalid response"'
+    if [[ ! -d "$providers_dir" ]]; then
+        echo -e "${RED}Error: Providers directory not found: $providers_dir${NC}" >&2
+        return 1
+    fi
+    
+    # Load all provider files
+    for provider_file in "$providers_dir"/*.sh; do
+        if [[ -f "$provider_file" ]]; then
+            source "$provider_file"
+        fi
+    done
 }
 
-call_anthropic() {
-    local api_key="$1"
-    local model="$2"
-    local prompt="$3"
-    
-    curl -s -X POST "https://api.anthropic.com/v1/messages" \
-        -H "x-api-key: $api_key" \
-        -H "Content-Type: application/json" \
-        -H "anthropic-version: 2023-06-01" \
-        -d "{
-            \"model\": \"$model\",
-            \"max_tokens\": 2000,
-            \"messages\": [
-                {\"role\": \"user\", \"content\": $(echo "$prompt" | jq -R -s .)}
-            ]
-        }" | jq -r '.content[0].text // .error.message // "Error: Invalid response"'
-}
-
-call_google() {
-    local api_key="$1"
-    local model="$2"
-    local prompt="$3"
-    
-    curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$api_key" \
-        -H "Content-Type: application/json" \
-        -d "{
-            \"contents\": [{
-                \"parts\": [{\"text\": $(echo "$prompt" | jq -R -s .)}]
-            }]
-        }" | jq -r '.candidates[0].content.parts[0].text // .error.message // "Error: Invalid response"'
-}
-
-call_ollama() {
-    local host="$1"
-    local model="$2"
-    local prompt="$3"
-    
-    curl -s -X POST "$host/api/generate" \
-        -H "Content-Type: application/json" \
-        -d "{
-            \"model\": \"$model\",
-            \"prompt\": $(echo "$prompt" | jq -R -s .),
-            \"stream\": false
-        }" | jq -r '.response // .error // "Error: Invalid response"'
-}
+# Load providers at startup
+load_providers "$PROVIDERS_DIR"
 
 call_ai_provider() {
     local provider="$1"
@@ -211,36 +171,15 @@ call_ai_provider() {
         return 1
     fi
     
-    case "$provider" in
-        "openai")
-            local api_key model
-            api_key=$(echo "$provider_config" | jq -r '.api_key')
-            model=$(echo "$provider_config" | jq -r '.model')
-            call_openai "$api_key" "$model" "$prompt"
-            ;;
-        "anthropic")
-            local api_key model
-            api_key=$(echo "$provider_config" | jq -r '.api_key')
-            model=$(echo "$provider_config" | jq -r '.model')
-            call_anthropic "$api_key" "$model" "$prompt"
-            ;;
-        "google")
-            local api_key model
-            api_key=$(echo "$provider_config" | jq -r '.api_key')
-            model=$(echo "$provider_config" | jq -r '.model')
-            call_google "$api_key" "$model" "$prompt"
-            ;;
-        "ollama")
-            local host model
-            host=$(echo "$provider_config" | jq -r '.host')
-            model=$(echo "$provider_config" | jq -r '.model')
-            call_ollama "$host" "$model" "$prompt"
-            ;;
-        *)
-            echo -e "${RED}Error: Unknown provider '$provider'${NC}"
-            return 1
-            ;;
-    esac
+    # Check if provider function exists
+    if ! declare -f "call_$provider" >/dev/null 2>&1; then
+        echo -e "${RED}Error: Provider '$provider' not loaded or function not found${NC}"
+        return 1
+    fi
+    
+    # Call the provider function with standardized parameters
+    # Pass the entire provider config and let each provider extract what it needs
+    "call_$provider" "$provider_config" "$prompt"
 }
 
 # Parse command line arguments

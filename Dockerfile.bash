@@ -69,9 +69,11 @@ RUN bash -c "mkdir -p ~/.config/shell-ai"
 # Copy entire repository content
 COPY --chown=$USER:$USER . /home/shelluser/
 
-# Copy AI integration scripts to expected location and make them executable
+# Copy AI integration scripts and providers to expected location and make them executable
 RUN cp -r /home/shelluser/scripts/* /home/shelluser/.config/shell-ai/ && \
-    chmod +x /home/shelluser/.config/shell-ai/*.sh
+    cp -r /home/shelluser/providers /home/shelluser/.config/shell-ai/ && \
+    chmod +x /home/shelluser/.config/shell-ai/*.sh && \
+    chmod +x /home/shelluser/.config/shell-ai/providers/*.sh
 
 # Copy configuration files to expected locations
 RUN cp /home/shelluser/config/tmux.conf /home/shelluser/.tmux.conf && \

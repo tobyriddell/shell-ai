@@ -9,6 +9,7 @@ An AI-enhanced shell environment that seamlessly integrates multiple AI provider
 ## 🚀 Features
 
 - **Multi-Provider AI Support**: OpenAI, Anthropic, Google Gemini, and Ollama
+- **Modular Architecture**: Runtime provider loading allows for easy customization per environment
 - **Multi-Shell Support**: Native bash and zsh integration with shell-specific optimizations
 - **Smart Context Capture**: Automatically includes shell history (via atuin) and tmux pane content
 - **Two Prompt Methods**: 
@@ -111,6 +112,42 @@ docker run -it \
   -e AI_PROVIDER="openai" \
   shell-ai
 ```
+
+## 🔧 Modular Architecture
+
+The shell-ai system uses a modular architecture where AI providers are loaded at runtime from separate files. This allows for easy customization and environment-specific deployments.
+
+### Provider Structure
+
+```
+~/.config/shell-ai/
+├── providers/
+│   ├── openai.sh      # OpenAI provider
+│   ├── anthropic.sh   # Anthropic provider
+│   ├── google.sh      # Google Gemini provider
+│   └── ollama.sh      # Ollama provider
+├── ai-shell.sh        # Main shell integration
+└── ai-setup.sh        # Configuration script
+```
+
+### Custom Providers
+
+You can create custom providers by:
+
+1. Create a new file in `~/.config/shell-ai/providers/`
+2. Implement the required functions:
+   - `call_<provider>()` - Handle AI API calls
+   - `setup_<provider>()` - Handle configuration
+   - Set `PROVIDER_NAME` and `PROVIDER_DESCRIPTION` variables
+
+3. The provider will be automatically discovered and loaded
+
+### Environment-Specific Deployments
+
+For environments requiring different provider sets:
+- Include only the needed provider files in the `providers/` directory
+- The system will automatically adapt to available providers
+- No code changes needed in the main scripts
 
 ## 💡 Usage Examples
 
