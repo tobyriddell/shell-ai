@@ -74,11 +74,11 @@ command_not_found_handle() {
     return 127
 }
 
-# Function to quickly ask AI about the last command
+# Function to quickly ask AI about the last command you ran
 ai-last() {
     local last_cmd
     if command -v atuin >/dev/null 2>&1; then
-        last_cmd=$(atuin history list --limit 1 | head -n1)
+        last_cmd=$(atuin history list | head -n1)
     else
         last_cmd=$(history | tail -n1 | sed 's/^[ ]*[0-9]*[ ]*//')
     fi
@@ -101,7 +101,7 @@ ai-here() {
 ai-fix() {
     local last_cmd
     if command -v atuin >/dev/null 2>&1; then
-        last_cmd=$(atuin history list --limit 1 | head -n1)
+        last_cmd=$(atuin history list | head -n1)
     else
         last_cmd=$(history | tail -n1 | sed 's/^[ ]*[0-9]*[ ]*//')
     fi
