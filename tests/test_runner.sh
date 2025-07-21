@@ -131,6 +131,56 @@ test_ai_shell_basic() {
     fi
 }
 
+# Test AI history functions (ai-last, ai-fix)
+test_ai_history_functions() {
+    local shell="$1"
+    
+    # Source the test file and run tests
+    source tests/test_ai_history_functions.sh
+    
+    # Test that atuin mock works as expected
+    if ! test_atuin_mock_rejects_limit; then
+        echo "Mock atuin test failed"
+        return 1
+    fi
+    
+    # Test ai-last with atuin
+    if [[ "$shell" == "zsh" ]]; then
+        test_ai_last_with_atuin_zsh
+    else
+        test_ai_last_with_atuin_bash
+    fi
+    
+    local result1=$?
+    
+    # Test ai-last without atuin (fallback)
+    if [[ "$shell" == "bash" ]]; then
+        test_ai_last_without_atuin_bash
+    else
+        # For zsh, we'll just test bash fallback since the logic is similar
+        test_ai_last_without_atuin_bash
+    fi
+    
+    local result2=$?
+    
+    # Test ai-fix function
+    if [[ "$shell" == "bash" ]]; then
+        test_ai_fix_with_atuin_bash
+    else
+        # For now, only test bash version of ai-fix since they're almost identical
+        test_ai_fix_with_atuin_bash
+    fi
+    
+    local result3=$?
+    
+    # Test empty history handling
+    test_ai_last_empty_history
+    local result4=$?
+    
+    # Return success only if all tests pass
+    [[ $result1 -eq 0 && $result2 -eq 0 && $result3 -eq 0 && $result4 -eq 0 ]]
+}
+
 # Test config management
 test_config_management() {
     local shell="$1"
@@ -172,6 +222,7 @@ run_shell_tests() {
     
     run_test "Command Extraction" "test_command_extraction $shell" "$shell"
     run_test "AI Shell Basic" "test_ai_shell_basic $shell" "$shell"
+    run_test "AI History Functions" "test_ai_history_functions $shell" "$shell"
     run_test "Config Management" "test_config_management $shell" "$shell"
     run_test "tmux Integration" "test_tmux_integration $shell" "$shell"
     run_test "Prefix Handling" "test_prefix_handling $shell" "$shell"
