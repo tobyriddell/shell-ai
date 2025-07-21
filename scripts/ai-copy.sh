@@ -9,6 +9,10 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 CYAN='\033[0;36m'
 NC='\033[0m'
+# Additional colors for pane selector
+BOLD='\033[1m'
+DIM='\033[2m'
+REVERSE='\033[7m'
 
 if [[ ! -f "$RESPONSE_FILE" ]]; then
     echo -e "${RED}No AI response found. Run an AI query first.${NC}"
@@ -165,73 +169,271 @@ copy_to_shell() {
     fi
 }
 
-send_to_pane() {
-    if [[ -z "$TMUX" ]]; then
-        echo -e "${RED}Not running in tmux${NC}"
+# Get panes information in array format
+get_panes_info() {
+    local panes_info=()
+    local line
+    while IFS= read -r line; do
+        panes_info+=("$line")
+    done < <(tmux list-panes -a -F "#{session_name}:#{window_index}.#{pane_index}|#{pane_title}|#{t:last-used}|#{pane_active}")
+    printf '%s\n' "${panes_info[@]}"
+}
+
+# Get the last-used pane index (most recently accessed)
+get_last_used_pane_index() {
+    local panes_info=()
+    local current_pane_id=$(tmux display-message -p "#{session_name}:#{window_index}.#{pane_index}")
+    local last_used_time=0
+    local last_used_index=0
+    local index=0
+    
+    while IFS= read -r line; do
+        local pane_id=$(echo "$line" | cut -d'|' -f1)
+        local last_used=$(echo "$line" | cut -d'|' -f3)
+        local is_active=$(echo "$line" | cut -d'|' -f4)
+        
+        # Skip current pane, prioritize recently used panes
+        if [[ "$pane_id" != "$current_pane_id" ]]; then
+            if [[ "$is_active" == "1" ]] || [[ "$last_used" -gt "$last_used_time" ]]; then
+                last_used_time="$last_used"
+                last_used_index="$index"
+            fi
+        fi
+        ((index++))
+    done < <(get_panes_info)
+    
+    echo "$last_used_index"
+}
+
+# Display panes with selection highlighting
+display_panes() {
+    local selected_index=$1
+    local panes_info=()
+    local index=0
+    
+    echo -e "${YELLOW}Select target tmux pane:${NC}" >&2
+    echo -e "${DIM}Use ↑↓/WS/KJ to navigate, Enter to select, q to cancel${NC}" >&2
+    echo >&2
+    
+    while IFS= read -r line; do
+        local pane_id=$(echo "$line" | cut -d'|' -f1)
+        local pane_title=$(echo "$line" | cut -d'|' -f2)
+        local display_line="$pane_id - $pane_title"
+        
+        if [[ $index -eq $selected_index ]]; then
+            echo -e "  ${BOLD}${REVERSE}> $display_line${NC}" >&2
+        else
+            echo -e "    $display_line" >&2
+        fi
+        ((index++))
+    done < <(get_panes_info)
+    echo >&2
+}
+
+# Interactive pane selector with keyboard navigation
+interactive_pane_selector() {
+    # set -x
+    local panes_info=()
+    mapfile -t panes_info < <(get_panes_info)
+    local pane_count=${#panes_info[@]}
+    
+    if [[ $pane_count -eq 0 ]]; then
+        echo -e "${RED}No tmux panes found${NC}" >&2
+        # set +x
         return 1
     fi
     
-    # List available panes
-    echo -e "${YELLOW}Available tmux panes:${NC}"
-    tmux list-panes -a -F "#{session_name}:#{window_index}.#{pane_index} - #{pane_title}"
-    echo
+    local selected_index
+    selected_index=$(get_last_used_pane_index)
     
-    read -p "Enter target pane (format: session:window.pane): " target_pane
+    # Ensure selected_index is within bounds
+    if [[ $selected_index -ge $pane_count ]]; then
+        selected_index=0
+    fi
     
-    if [[ -n "$target_pane" ]]; then
-        local commands
-        commands=$(extract_commands)
+    # Clear any buffered input to prevent immediate selection
+    while read -r -t 0; do
+        read -r > /dev/null 2>&1
+    done
+    
+    while true; do
+        clear >&2
+        display_panes "$selected_index"
         
+        # Small delay to ensure display is rendered
+        sleep 0.05
+        
+        # Read input (handle arrow keys properly)
+        read -rsn1 key
+        
+        # Handle escape sequences (arrow keys)
+        if [[ "$key" == $'\033' ]]; then
+            read -rsn2 -t 0.01 key_seq || key_seq=""
+            key="$key$key_seq"
+        fi
+        
+        case "$key" in
+            # Arrow keys
+            $'\033[A') # Up arrow
+                ((selected_index--))
+                if [[ $selected_index -lt 0 ]]; then
+                    selected_index=$((pane_count - 1))
+                fi
+                ;;
+            $'\033[B') # Down arrow
+                ((selected_index++))
+                if [[ $selected_index -ge $pane_count ]]; then
+                    selected_index=0
+                fi
+                ;;
+            $'\033[D') # Left arrow (same as up)
+                ((selected_index--))
+                if [[ $selected_index -lt 0 ]]; then
+                    selected_index=$((pane_count - 1))
+                fi
+                ;;
+            $'\033[C') # Right arrow (same as down)
+                ((selected_index++))
+                if [[ $selected_index -ge $pane_count ]]; then
+                    selected_index=0
+                fi
+                ;;
+            # WASD navigation
+            'w'|'W'|'k'|'K') # Up
+                ((selected_index--))
+                if [[ $selected_index -lt 0 ]]; then
+                    selected_index=$((pane_count - 1))
+                fi
+                ;;
+            's'|'S'|'j'|'J') # Down
+                ((selected_index++))
+                if [[ $selected_index -ge $pane_count ]]; then
+                    selected_index=0
+                fi
+                ;;
+            'a'|'A'|'h'|'H') # Left (same as up)
+                ((selected_index--))
+                if [[ $selected_index -lt 0 ]]; then
+                    selected_index=$((pane_count - 1))
+                fi
+                ;;
+            'd'|'D'|'l'|'L') # Right (same as down)
+                ((selected_index++))
+                if [[ $selected_index -ge $pane_count ]]; then
+                    selected_index=0
+                fi
+                ;;
+            # Enter to select
+            '')
+                local selected_pane_info="${panes_info[$selected_index]}"
+                local selected_pane_id=$(echo "$selected_pane_info" | cut -d'|' -f1)
+                echo "$selected_pane_id"
+                # set +x
+                return 0
+                ;;
+            # Quit
+            'q'|'Q'|$'\004') # q, Q, or Ctrl+D
+                # set +x
+                return 1
+                ;;
+        esac
+    done
+}
+
+select_pane() {
+    if [[ -z "$TMUX" ]]; then
+        echo -e "${RED}Not running in tmux${NC}" >&2
+        return 1
+    fi
+
+    # Set global variable for use in send_to_pane
+    target_pane=$(interactive_pane_selector)
+    local exit_code=$?
+    
+    if [[ $exit_code -ne 0 ]] || [[ -z "$target_pane" ]]; then
+        echo -e "${RED}Pane selection cancelled${NC}" >&2
+        return 1
+    fi
+
+    if [[ -n "$target_pane" ]]; then
         # Check if target pane is the current pane
         local current_pane_id=$(tmux display-message -p "#{session_name}:#{window_index}.#{pane_index}")
         local is_current_pane=false
         if [[ "$target_pane" == "$current_pane_id" ]] || [[ "$target_pane" == "$TMUX_PANE" ]]; then
             is_current_pane=true
         fi
-        
-        if [[ -n "$commands" ]]; then
-            # Convert commands to array to avoid read interference
-            local cmd_array=()
-            while IFS= read -r cmd; do
-                if [[ -n "$cmd" ]]; then
-                    cmd_array+=("$cmd")
-                fi
-            done <<< "$commands"
-            
-            # Process each command from array
-            for cmd in "${cmd_array[@]}"; do
-                # Selectively escape only problematic sequences for display
-                local display_cmd="$cmd"
-                display_cmd="${display_cmd//\\n/\\\\n}"    # \n -> \\n
-                display_cmd="${display_cmd//\\t/\\\\t}"    # \t -> \\t
-                display_cmd="${display_cmd//\\r/\\\\r}"    # \r -> \\r
-                display_cmd="${display_cmd//\\\\/\\\\\\\\}" # \\ -> \\\\
-                printf "${CYAN}Command: ${NC}%s\n" "$display_cmd" 
-                read -p "Send this command? Press Enter to send, 's' to skip: " -n 1 -r
-                echo
-                if [[ ! $REPLY =~ ^[Ss]$ ]]; then
-                    # Send complete command + Enter in one operation (using original unescaped command)
-                    tmux send-keys -t "$target_pane" "$cmd" C-m
-                fi
-            done
-            
-            if [[ "$is_current_pane" == "true" ]]; then
-                echo -e "${GREEN}Commands sent to current pane! Exiting ai-copy to avoid conflicts...${NC}"
-                sleep 1
-                exit 0
-            else
-                echo -e "${GREEN}Commands sent to target pane${NC}"
-                echo
-                read -p "Commands are executing. Press 'x' to exit ai-copy, or any other key to continue: " -n 1 -r
-                echo
-                if [[ $REPLY =~ ^[Xx]$ ]]; then
-                    exit 0
-                fi
-            fi
-        else
-            echo -e "${RED}No commands found in AI response${NC}"
-            return 1
+
+        if [[ "$is_current_pane" == "true" ]]; then
+            echo -e "${GREEN}Target pane is the current pane.${NC}" >&2
+            # Set global flag for current pane
+            target_is_current_pane=true
+            return 0
         fi
+
+        echo -e "${GREEN}Selected pane: ${BOLD}$target_pane${NC}" >&2
+        target_is_current_pane=false
+        return 0
+    else
+        echo -e "${RED}Invalid pane format or not found.${NC}" >&2
+        return 1
+    fi
+}
+
+send_to_pane() {
+    if [[ -z "$TMUX" ]]; then
+        echo -e "${RED}Not running in tmux${NC}" >&2
+        return 1
+    fi
+    
+    if ! select_pane; then
+        return 1
+    fi
+    
+    local commands
+    commands=$(extract_commands)
+    
+    if [[ -n "$commands" ]]; then
+        # Convert commands to array to avoid read interference
+        local cmd_array=()
+        while IFS= read -r cmd; do
+            if [[ -n "$cmd" ]]; then
+                cmd_array+=("$cmd")
+            fi
+        done <<< "$commands"
+        
+        # Process each command from array
+        for cmd in "${cmd_array[@]}"; do
+            # Selectively escape only problematic sequences for display
+            local display_cmd="$cmd"
+            display_cmd="${display_cmd//\\n/\\\\n}"    # \n -> \\n
+            display_cmd="${display_cmd//\\t/\\\\t}"    # \t -> \\t
+            display_cmd="${display_cmd//\\r/\\\\r}"    # \r -> \\r
+            display_cmd="${display_cmd//\\\\/\\\\\\\\}" # \\ -> \\\\
+            printf "${CYAN}Command: ${NC}%s\n" "$display_cmd" 
+            read -p "Send this command? Press Enter to send, 's' to skip: " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Ss]$ ]]; then
+                # Send complete command + Enter in one operation (using original unescaped command)
+                tmux send-keys -t "$target_pane" "$cmd" C-m
+            fi
+        done
+        
+        if [[ "$target_is_current_pane" == "true" ]]; then
+            echo -e "${GREEN}Commands sent to current pane! Exiting ai-copy to avoid conflicts...${NC}"
+            sleep 1
+            exit 0
+        else
+            echo -e "${GREEN}Commands sent to target pane${NC}"
+            echo
+            read -p "Commands are executing. Press 'x' to exit ai-copy, or any other key to continue: " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Xx]$ ]]; then
+                exit 0
+            fi
+        fi
+    else
+        echo -e "${RED}No commands found in AI response${NC}" >&2
+        return 1
     fi
 }
 
