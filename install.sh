@@ -139,6 +139,17 @@ install_scripts() {
             exit 1
         fi
     done
+    
+    # Install Rust binary if available
+    local rust_binary="$SCRIPT_DIR/tmux-selector/target/release/tmux-selector"
+    if [[ -f "$rust_binary" ]]; then
+        cp "$rust_binary" "$INSTALL_DIR/tmux-selector"
+        chmod +x "$INSTALL_DIR/tmux-selector"
+        echo -e "${GREEN}✓ Installed: tmux-selector (Rust binary)${NC}"
+    else
+        echo -e "${YELLOW}⚠ tmux-selector binary not found - run 'make rust-binary' to build it${NC}"
+        echo -e "${YELLOW}  ai-copy.sh will still work but may be slower${NC}"
+    fi
 }
 
 # Install provider files
