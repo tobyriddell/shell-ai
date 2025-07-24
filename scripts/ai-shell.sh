@@ -67,10 +67,43 @@ get_shell_history() {
 }
 
 get_tmux_pane_content() {
-    local target_pane="${1:-$TMUX_PANE}"
     if [[ -n "$TMUX" ]]; then
-        # tmux capture-pane -t "$target_pane" -p -S "-$MAX_PANE_LINES" 2>/dev/null || echo "No tmux pane content available"
-        tmux capture-pane -t "$target_pane" -p 2>/dev/null || echo "No tmux pane content available"
+        # Get all panes in the current window
+        local panes
+        panes=$(tmux list-panes -F "#{pane_index}:#{pane_title}:#{pane_active}" 2>/dev/null)
+        
+        if [[ -z "$panes" ]]; then
+            echo "No tmux panes found"
+            return
+        fi
+        
+        echo "=== TMUX WINDOW CONTENT ==="
+        
+        # Loop through each pane and capture its content
+        while IFS=':' read -r pane_index pane_title is_active; do
+            local marker="PANE $pane_index"
+            if [[ "$is_active" == "1" ]]; then
+                marker="$marker (ACTIVE)"
+            fi
+            if [[ -n "$pane_title" && "$pane_title" != "bash" && "$pane_title" != "zsh" ]]; then
+                marker="$marker - $pane_title"
+            fi
+            
+            echo
+            echo "--- $marker ---"
+            
+            # Capture pane content
+            local content
+            content=$(tmux capture-pane -t "$pane_index" -p 2>/dev/null)
+            if [[ -n "$content" ]]; then
+                echo "$content"
+            else
+                echo "(empty pane)"
+            fi
+        done <<< "$panes"
+        
+        echo
+        echo "=== END TMUX CONTENT ==="
     else
         echo "Not running in tmux"
     fi
