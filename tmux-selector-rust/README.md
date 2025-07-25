@@ -1,4 +1,4 @@
-# tmux-selector
+# tmux-selector - Rust implementation
 
 A high-performance Rust binary for interactive tmux pane selection, designed to replace slower shell-based implementations in the Shell AI Integration project.
 
