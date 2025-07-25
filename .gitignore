@@ -55,5 +55,5 @@ docker-compose.override.yml
 **/context.tmp
 
 # Rust build artifacts
-tmux-selector/target/
-tmux-selector/Cargo.lock 
+tmux-selector-rust/target/
+tmux-selector-rust/Cargo.lock 
