@@ -69,6 +69,9 @@ RUN bash -c "mkdir -p ~/.config/shell-ai"
 # Copy entire repository content
 COPY --chown=$USER:$USER . /home/shelluser/
 
+# Copy the Rust binary to the config directory
+COPY --chown=$USER:$USER tmux-selector/target/release/tmux-selector /home/shelluser/.config/shell-ai/tmux-selector
+
 # Copy AI integration scripts and providers to expected location and make them executable
 RUN cp -r /home/shelluser/scripts/* /home/shelluser/.config/shell-ai/ && \
     cp -r /home/shelluser/providers /home/shelluser/.config/shell-ai/ && \

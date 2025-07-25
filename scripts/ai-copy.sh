@@ -169,7 +169,7 @@ copy_to_shell() {
     fi
 }
 
-# Get panes information in array format
+# Get panes information in array format (fallback function)
 get_panes_info() {
     local panes_info=()
     local line
@@ -179,7 +179,7 @@ get_panes_info() {
     printf '%s\n' "${panes_info[@]}"
 }
 
-# Get the last-used pane index (most recently accessed)
+# Get the last-used pane index (fallback function)
 get_last_used_pane_index() {
     local panes_info=()
     local current_pane_id=$(tmux display-message -p "#{session_name}:#{window_index}.#{pane_index}")
@@ -205,7 +205,7 @@ get_last_used_pane_index() {
     echo "$last_used_index"
 }
 
-# Display panes with selection highlighting
+# Display panes with selection highlighting (fallback function)
 display_panes() {
     local selected_index=$1
     local panes_info=()
@@ -230,16 +230,14 @@ display_panes() {
     echo >&2
 }
 
-# Interactive pane selector with keyboard navigation
-interactive_pane_selector() {
-    # set -x
+# Fallback shell-based pane selector
+fallback_pane_selector() {
     local panes_info=()
     mapfile -t panes_info < <(get_panes_info)
     local pane_count=${#panes_info[@]}
     
     if [[ $pane_count -eq 0 ]]; then
         echo -e "${RED}No tmux panes found${NC}" >&2
-        # set +x
         return 1
     fi
     
@@ -328,16 +326,48 @@ interactive_pane_selector() {
                 local selected_pane_info="${panes_info[$selected_index]}"
                 local selected_pane_id=$(echo "$selected_pane_info" | cut -d'|' -f1)
                 echo "$selected_pane_id"
-                # set +x
                 return 0
                 ;;
             # Quit
             'q'|'Q'|$'\004') # q, Q, or Ctrl+D
-                # set +x
                 return 1
                 ;;
         esac
     done
+}
+
+# Interactive pane selector using Rust binary with fallback
+interactive_pane_selector() {
+    # Look for the tmux-selector binary in multiple locations
+    local tmux_selector=""
+    
+    # Check if we have the binary in the expected locations
+    if [[ -x "$CONFIG_DIR/../tmux-selector/target/release/tmux-selector" ]]; then
+        tmux_selector="$CONFIG_DIR/../tmux-selector/target/release/tmux-selector"
+    elif [[ -x "$CONFIG_DIR/tmux-selector" ]]; then
+        tmux_selector="$CONFIG_DIR/tmux-selector"
+    elif command -v tmux-selector >/dev/null 2>&1; then
+        tmux_selector="tmux-selector"
+    else
+        # Binary not found, use fallback
+        fallback_pane_selector
+        return $?
+    fi
+    
+    # Try using the Rust binary first
+    # The binary now uses stderr for interactive display and stdout for the result
+    local result
+    result=$("$tmux_selector" 2>/dev/tty)
+    local exit_code=$?
+    
+    if [[ $exit_code -eq 0 && -n "$result" && ! "$result" =~ "Error:" ]]; then
+        echo "$result"
+        return 0
+    fi
+    
+    # Rust binary failed or returned empty result, use fallback
+    fallback_pane_selector
+    return $?
 }
 
 select_pane() {

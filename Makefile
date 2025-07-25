@@ -13,11 +13,16 @@ BUILD_CONTEXT := .
 SCRIPTS := $(wildcard scripts/*.sh) install.sh
 CONFIG := $(wildcard config/*.sh config/*.json config/tmux.conf)
 PROVIDERS := $(wildcard providers/*.sh)
-COMMON_DEPS := $(SCRIPTS) $(CONFIG) $(PROVIDERS)
+RUST_SOURCES := tmux-selector/src/main.rs tmux-selector/Cargo.toml
+RUST_BINARY := tmux-selector/target/release/tmux-selector
+TEST_SCRIPTS := $(wildcard tests/*.sh)
+COMMON_DEPS := $(SCRIPTS) $(CONFIG) $(PROVIDERS) $(RUST_BINARY) $(TEST_SCRIPTS)
+
 
 # Build stamp files
 BASH_STAMP := .bash-image-$(TAG).stamp
 ZSH_STAMP := .zsh-image-$(TAG).stamp
+RUST_STAMP := .rust-binary-$(TAG).stamp
 
 # Default target
 .PHONY: help
@@ -30,9 +35,9 @@ help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 .PHONY: all
-all: bash zsh ## Build both bash and zsh images
+all: rust-binary bash zsh ## Build Rust binary and both bash and zsh images
 
-.PHONY: force-bash force-zsh force-all
+.PHONY: force-bash force-zsh force-rust force-all
 force-bash: ## Force rebuild bash image (ignore dependencies)
 	@rm -f $(BASH_STAMP)
 	@$(MAKE) bash
@@ -41,9 +46,25 @@ force-zsh: ## Force rebuild zsh image (ignore dependencies)
 	@rm -f $(ZSH_STAMP)
 	@$(MAKE) zsh
 
-force-all: ## Force rebuild both images (ignore dependencies)
-	@rm -f $(BASH_STAMP) $(ZSH_STAMP)
+force-rust: ## Force rebuild Rust binary (ignore dependencies)
+	@rm -f $(RUST_STAMP)
+	@$(MAKE) rust-binary
+
+force-all: ## Force rebuild Rust binary and both images (ignore dependencies)
+	@rm -f $(BASH_STAMP) $(ZSH_STAMP) $(RUST_STAMP)
 	@$(MAKE) all
+
+# Build Rust binary for tmux pane selection
+rust-binary: $(RUST_STAMP) ## Build Rust tmux-selector binary
+$(RUST_STAMP): $(RUST_SOURCES)
+	@echo "Building Rust tmux-selector binary..."
+	@if ! command -v cargo >/dev/null 2>&1; then \
+		echo "Error: Rust/Cargo not found. Please install Rust: https://rustup.rs/"; \
+		exit 1; \
+	fi
+	cd tmux-selector && cargo build --release
+	@echo "✓ Built tmux-selector binary"
+	@touch $(RUST_STAMP)
 
 # Build bash Docker image only when dependencies change
 bash: $(BASH_STAMP) ## Build bash Docker image
@@ -137,20 +158,23 @@ dev-zsh: zsh ## Run zsh container with project mounted for development
 		$(ZSH_IMAGE):$(TAG)
 
 .PHONY: clean
-clean: ## Remove built Docker images and build stamps
-	@echo "Removing Docker images and build stamps..."
+clean: ## Remove built Docker images, Rust binary, and build stamps
+	@echo "Removing Docker images, Rust binary, and build stamps..."
 	-docker rmi $(BASH_IMAGE):$(TAG) 2>/dev/null || true
 	-docker rmi $(ZSH_IMAGE):$(TAG) 2>/dev/null || true
-	-rm -f $(BASH_STAMP) $(ZSH_STAMP)
-	@echo "✓ Cleaned up images and build stamps"
+	-rm -f $(BASH_STAMP) $(ZSH_STAMP) $(RUST_STAMP)
+	-cd tmux-selector && cargo clean 2>/dev/null || true
+	@echo "✓ Cleaned up images, binary, and build stamps"
 
 .PHONY: check
-check: ## Check if Dockerfiles exist and are valid
-	@echo "Checking Dockerfiles..."
+check: ## Check if Dockerfiles and dependencies exist
+	@echo "Checking dependencies..."
 	@test -f Dockerfile.bash && echo "✓ Dockerfile.bash exists" || echo "✗ Dockerfile.bash missing"
 	@test -f Dockerfile.zsh && echo "✓ Dockerfile.zsh exists" || echo "✗ Dockerfile.zsh missing"
 	@test -d scripts && echo "✓ scripts/ directory exists" || echo "✗ scripts/ directory missing"
 	@test -d config && echo "✓ config/ directory exists" || echo "✗ config/ directory missing"
+	@test -d tmux-selector && echo "✓ tmux-selector/ directory exists" || echo "✗ tmux-selector/ directory missing"
+	@command -v cargo >/dev/null 2>&1 && echo "✓ Rust/Cargo available" || echo "✗ Rust/Cargo not found"
 
 # Build targets for CI/CD
 .PHONY: build-bash-ci

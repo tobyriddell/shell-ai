@@ -52,4 +52,8 @@ docker-compose.override.yml
 
 # AI response cache
 **/last_response.txt
-**/context.tmp 
+**/context.tmp
+
+# Rust build artifacts
+tmux-selector-rust/target/
+tmux-selector-rust/Cargo.lock 
