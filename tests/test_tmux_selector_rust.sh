@@ -3,7 +3,7 @@
 # Test Rust tmux-selector binary functionality
 
 # Test that the binary exists and is executable
-test_binary_exists() {
+test_rust_binary_exists() {
     local binary_path
     binary_path="$TEMP_CONFIG_DIR/tmux-selector"
     
@@ -17,7 +17,7 @@ test_binary_exists() {
 }
 
 # Test that the binary fails gracefully when not in tmux
-test_binary_outside_tmux() {
+test_rust_binary_outside_tmux() {
     local binary_path="$TEMP_CONFIG_DIR/tmux-selector"
     
     if [[ ! -x "$binary_path" ]]; then
@@ -32,7 +32,7 @@ test_binary_outside_tmux() {
 }
 
 # Test auto-selection flag
-test_binary_auto_flag() {
+test_rust_binary_auto_flag() {
     local binary_path="$TEMP_CONFIG_DIR/tmux-selector"
     
     if [[ ! -x "$binary_path" ]]; then
@@ -47,7 +47,7 @@ test_binary_auto_flag() {
 }
 
 # Test that ai-copy.sh can find and use the binary
-test_ai_copy_integration() {
+test_rust_ai_copy_integration() {
     # In Docker environment, simplify this test to avoid terminal issues
     # Just verify that ai-copy.sh can be sourced and has the right functions
     
@@ -74,7 +74,7 @@ test_ai_copy_integration() {
 }
 
 # Test fallback behavior when binary is not found
-test_fallback_behavior() {
+test_rust_fallback_behavior() {
     # In Docker environment, simplify this test to avoid terminal issues
     # Just verify that ai-copy.sh has fallback functions defined
     
@@ -103,7 +103,7 @@ test_fallback_behavior() {
 }
 
 # Test JSON output format (if binary is available)
-test_json_output() {
+test_rust_json_output() {
     local binary_path="$TEMP_CONFIG_DIR/tmux-selector"
     
     if [[ ! -x "$binary_path" ]]; then

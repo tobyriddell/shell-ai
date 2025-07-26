@@ -1,0 +1,17 @@
+# Go build artifacts
+tmux-selector-go
+tmux-selector
+go.sum
+
+# Vendor directory
+vendor/
+
+# Go workspace files
+go.work
+go.work.sum
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo 

@@ -215,32 +215,32 @@ test_tmux_selector_golang() {
     local shell="$1"
     
     # Source the test file and run tests
-    source tests/test_tmux_selector.sh
+    source tests/test_tmux_selector_go.sh
     
     # Test binary existence and basic functionality
-    if ! test_binary_exists; then
+    if ! test_go_binary_exists; then
         echo "Golang binary existence test failed"
         return 1
     fi
     
     # Test graceful failure outside tmux
-    test_binary_outside_tmux
+    test_go_binary_outside_tmux
     local result1=$?
     
     # Test auto flag functionality
-    test_binary_auto_flag
+    test_go_binary_auto_flag
     local result2=$?
     
     # Test ai-copy.sh integration
-    test_ai_copy_integration
+    test_go_ai_copy_integration
     local result3=$?
     
     # Test fallback behavior
-    test_fallback_behavior
+    test_go_fallback_behavior
     local result4=$?
     
     # Test JSON output
-    test_json_output
+    test_go_json_output
     local result5=$?
     
     # Return success only if all tests pass
@@ -267,10 +267,10 @@ test_tmux_selector_rust() {
     cp "$rust_binary" "$current_binary"
     
     # Source the test file and run tests
-    source tests/test_tmux_selector.sh
+    source tests/test_tmux_selector_rust.sh
     
     # Test binary existence and basic functionality
-    if ! test_binary_exists; then
+    if ! test_rust_binary_exists; then
         echo "Rust binary existence test failed"
         # Restore original binary
         cp "$backup_binary" "$current_binary" 2>/dev/null || true
@@ -278,23 +278,23 @@ test_tmux_selector_rust() {
     fi
     
     # Test graceful failure outside tmux
-    test_binary_outside_tmux
+    test_rust_binary_outside_tmux
     local result1=$?
     
     # Test auto flag functionality
-    test_binary_auto_flag
+    test_rust_binary_auto_flag
     local result2=$?
     
     # Test ai-copy.sh integration
-    test_ai_copy_integration
+    test_rust_ai_copy_integration
     local result3=$?
     
     # Test fallback behavior
-    test_fallback_behavior
+    test_rust_fallback_behavior
     local result4=$?
     
     # Test JSON output
-    test_json_output
+    test_rust_json_output
     local result5=$?
     
     # Restore original binary
