@@ -13,16 +13,19 @@ BUILD_CONTEXT := .
 SCRIPTS := $(wildcard scripts/*.sh) install.sh
 CONFIG := $(wildcard config/*.sh config/*.json config/tmux.conf)
 PROVIDERS := $(wildcard providers/*.sh)
-RUST_SOURCES := tmux-selector/src/main.rs tmux-selector/Cargo.toml
-RUST_BINARY := tmux-selector/target/release/tmux-selector
+RUST_SOURCES := tmux-selector-rust/src/main.rs tmux-selector-rust/Cargo.toml
+RUST_BINARY := tmux-selector-rust/target/release/tmux-selector
+GO_SOURCES := $(wildcard tmux-selector-go/*.go tmux-selector-go/go.mod tmux-selector-go/go.sum)
+GO_BINARY := tmux-selector-go/tmux-selector
 TEST_SCRIPTS := $(wildcard tests/*.sh)
-COMMON_DEPS := $(SCRIPTS) $(CONFIG) $(PROVIDERS) $(RUST_BINARY) $(TEST_SCRIPTS)
+COMMON_DEPS := $(SCRIPTS) $(CONFIG) $(PROVIDERS) $(TEST_SCRIPTS)
 
 
 # Build stamp files
 BASH_STAMP := .bash-image-$(TAG).stamp
 ZSH_STAMP := .zsh-image-$(TAG).stamp
 RUST_STAMP := .rust-binary-$(TAG).stamp
+GO_STAMP := .go-binary-$(TAG).stamp
 
 # Default target
 .PHONY: help
@@ -35,9 +38,9 @@ help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 .PHONY: all
-all: rust-binary bash zsh ## Build Rust binary and both bash and zsh images
+all: rust-binary go-binary bash zsh ## Build Rust binary, Go binary, and both bash and zsh images
 
-.PHONY: force-bash force-zsh force-rust force-all
+.PHONY: force-bash force-zsh force-rust force-go force-all
 force-bash: ## Force rebuild bash image (ignore dependencies)
 	@rm -f $(BASH_STAMP)
 	@$(MAKE) bash
@@ -50,8 +53,12 @@ force-rust: ## Force rebuild Rust binary (ignore dependencies)
 	@rm -f $(RUST_STAMP)
 	@$(MAKE) rust-binary
 
-force-all: ## Force rebuild Rust binary and both images (ignore dependencies)
-	@rm -f $(BASH_STAMP) $(ZSH_STAMP) $(RUST_STAMP)
+force-go: ## Force rebuild Go binary (ignore dependencies)
+	@rm -f $(GO_STAMP)
+	@$(MAKE) go-binary
+
+force-all: ## Force rebuild Rust binary, Go binary, and both images (ignore dependencies)
+	@rm -f $(BASH_STAMP) $(ZSH_STAMP) $(RUST_STAMP) $(GO_STAMP)
 	@$(MAKE) all
 
 # Build Rust binary for tmux pane selection
@@ -62,13 +69,25 @@ $(RUST_STAMP): $(RUST_SOURCES)
 		echo "Error: Rust/Cargo not found. Please install Rust: https://rustup.rs/"; \
 		exit 1; \
 	fi
-	cd tmux-selector && cargo build --release
-	@echo "✓ Built tmux-selector binary"
+	cd tmux-selector-rust && cargo build --release
+	@echo "✓ Built Rust tmux-selector binary"
 	@touch $(RUST_STAMP)
+
+# Build Go binary for tmux pane selection
+go-binary: $(GO_STAMP) ## Build Go tmux-selector binary
+$(GO_STAMP): $(GO_SOURCES)
+	@echo "Building Go tmux-selector binary..."
+	@if ! command -v go >/dev/null 2>&1; then \
+		echo "Error: Go not found. Please install Go: https://golang.org/dl/"; \
+		exit 1; \
+	fi
+	cd tmux-selector-go && go mod tidy && go build -ldflags="-s -w" -o tmux-selector
+	@echo "✓ Built Golang tmux-selector binary"
+	@touch $(GO_STAMP)
 
 # Build bash Docker image only when dependencies change
 bash: $(BASH_STAMP) ## Build bash Docker image
-$(BASH_STAMP): Dockerfile.bash $(COMMON_DEPS)
+$(BASH_STAMP): Dockerfile.bash $(COMMON_DEPS) $(RUST_STAMP) $(GO_STAMP)
 	@echo "Building bash Docker image..."
 	docker build -f Dockerfile.bash -t $(BASH_IMAGE):$(TAG) $(BUILD_CONTEXT)
 	@echo "✓ Built $(BASH_IMAGE):$(TAG)"
@@ -76,7 +95,7 @@ $(BASH_STAMP): Dockerfile.bash $(COMMON_DEPS)
 
 # Build zsh Docker image only when dependencies change  
 zsh: $(ZSH_STAMP) ## Build zsh Docker image
-$(ZSH_STAMP): Dockerfile.zsh $(COMMON_DEPS)
+$(ZSH_STAMP): Dockerfile.zsh $(COMMON_DEPS) $(RUST_STAMP) $(GO_STAMP)
 	@echo "Building zsh Docker image..."
 	docker build -f Dockerfile.zsh -t $(ZSH_IMAGE):$(TAG) $(BUILD_CONTEXT)
 	@echo "✓ Built $(ZSH_IMAGE):$(TAG)"
@@ -158,13 +177,15 @@ dev-zsh: zsh ## Run zsh container with project mounted for development
 		$(ZSH_IMAGE):$(TAG)
 
 .PHONY: clean
-clean: ## Remove built Docker images, Rust binary, and build stamps
-	@echo "Removing Docker images, Rust binary, and build stamps..."
+clean: ## Remove built Docker images, Rust binary, Go binary, and build stamps
+	@echo "Removing Docker images, binaries, and build stamps..."
 	-docker rmi $(BASH_IMAGE):$(TAG) 2>/dev/null || true
 	-docker rmi $(ZSH_IMAGE):$(TAG) 2>/dev/null || true
-	-rm -f $(BASH_STAMP) $(ZSH_STAMP) $(RUST_STAMP)
-	-cd tmux-selector && cargo clean 2>/dev/null || true
-	@echo "✓ Cleaned up images, binary, and build stamps"
+	-rm -f $(BASH_STAMP) $(ZSH_STAMP) $(RUST_STAMP) $(GO_STAMP)
+	-cd tmux-selector-rust && cargo clean 2>/dev/null || true
+	-cd tmux-selector-go && go clean 2>/dev/null || true
+	-rm -f tmux-selector-go/tmux-selector 2>/dev/null || true
+	@echo "✓ Cleaned up images, binaries, and build stamps"
 
 .PHONY: check
 check: ## Check if Dockerfiles and dependencies exist
@@ -173,8 +194,10 @@ check: ## Check if Dockerfiles and dependencies exist
 	@test -f Dockerfile.zsh && echo "✓ Dockerfile.zsh exists" || echo "✗ Dockerfile.zsh missing"
 	@test -d scripts && echo "✓ scripts/ directory exists" || echo "✗ scripts/ directory missing"
 	@test -d config && echo "✓ config/ directory exists" || echo "✗ config/ directory missing"
-	@test -d tmux-selector && echo "✓ tmux-selector/ directory exists" || echo "✗ tmux-selector/ directory missing"
+	@test -d tmux-selector-rust && echo "✓ tmux-selector-rust/ directory exists" || echo "✗ tmux-selector-rust/ directory missing"
+	@test -d tmux-selector-go && echo "✓ tmux-selector-go/ directory exists" || echo "✗ tmux-selector-go/ directory missing"
 	@command -v cargo >/dev/null 2>&1 && echo "✓ Rust/Cargo available" || echo "✗ Rust/Cargo not found"
+	@command -v go >/dev/null 2>&1 && echo "✓ Go available" || echo "✗ Go not found"
 
 # Build targets for CI/CD
 .PHONY: build-bash-ci

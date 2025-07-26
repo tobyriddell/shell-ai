@@ -140,14 +140,14 @@ install_scripts() {
         fi
     done
     
-    # Install Rust binary if available
-    local rust_binary="$SCRIPT_DIR/tmux-selector/target/release/tmux-selector"
-    if [[ -f "$rust_binary" ]]; then
-        cp "$rust_binary" "$INSTALL_DIR/tmux-selector"
-        chmod +x "$INSTALL_DIR/tmux-selector"
-        echo -e "${GREEN}✓ Installed: tmux-selector (Rust binary)${NC}"
+    # Install Go binary if available
+    local go_binary="$SCRIPT_DIR/tmux-selector-go/tmux-selector"
+    if [[ -f "$go_binary" ]]; then
+        cp "$go_binary" "$INSTALL_DIR/tmux-selector-go"
+        chmod +x "$INSTALL_DIR/tmux-selector-go"
+        echo -e "${GREEN}✓ Installed: tmux-selector (Go binary)${NC}"
     else
-        echo -e "${YELLOW}⚠ tmux-selector binary not found - run 'make rust-binary' to build it${NC}"
+        echo -e "${YELLOW}⚠ tmux-selector Go binary not found - run 'make go-binary' to build it${NC}"
         echo -e "${YELLOW}  ai-copy.sh will still work but may be slower${NC}"
     fi
 }

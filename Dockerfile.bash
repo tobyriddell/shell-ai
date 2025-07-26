@@ -70,7 +70,13 @@ RUN bash -c "mkdir -p ~/.config/shell-ai"
 COPY --chown=$USER:$USER . /home/shelluser/
 
 # Copy the Rust binary to the config directory
-COPY --chown=$USER:$USER tmux-selector/target/release/tmux-selector /home/shelluser/.config/shell-ai/tmux-selector
+COPY --chown=$USER:$USER tmux-selector-rust/target/release/tmux-selector /home/shelluser/.config/shell-ai/tmux-selector-rust
+
+# Copy the Go binary to the config directory
+COPY --chown=$USER:$USER tmux-selector-go/tmux-selector /home/shelluser/.config/shell-ai/tmux-selector-go
+
+# Use the Golang tmux-selector binary by default
+COPY --chown=$USER:$USER tmux-selector-go/tmux-selector /home/shelluser/.config/shell-ai/tmux-selector
 
 # Copy AI integration scripts and providers to expected location and make them executable
 RUN cp -r /home/shelluser/scripts/* /home/shelluser/.config/shell-ai/ && \

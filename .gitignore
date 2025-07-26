@@ -57,3 +57,6 @@ docker-compose.override.yml
 # Rust build artifacts
 tmux-selector-rust/target/
 tmux-selector-rust/Cargo.lock 
+
+# Git hooks
+.git/hooks/post-commit 
