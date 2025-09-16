@@ -30,6 +30,7 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     autotools-dev \
     automake \
+    file \
     && rm -rf /var/lib/apt/lists/*
 
 # Build and install tmux 3.5a from source with checksum verification, we need at least 3.5 to fix the 'split-window -p' bug
@@ -81,6 +82,7 @@ COPY --chown=$USER:$USER tmux-selector-go/tmux-selector /home/shelluser/.config/
 # Copy AI integration scripts and providers to expected location and make them executable
 RUN cp -r /home/shelluser/scripts/* /home/shelluser/.config/shell-ai/ && \
     cp -r /home/shelluser/providers /home/shelluser/.config/shell-ai/ && \
+    cp /home/shelluser/create_tmux_layout.sh /home/shelluser/.config/shell-ai/ && \
     chmod +x /home/shelluser/.config/shell-ai/*.sh && \
     chmod +x /home/shelluser/.config/shell-ai/providers/*.sh
 
