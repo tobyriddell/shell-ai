@@ -18,6 +18,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo -e "${BLUE}=== Shell AI Integration Installer ===${NC}"
 echo
+echo -e "${YELLOW}⚠️  DEPRECATION NOTICE ⚠️${NC}"
+echo -e "${YELLOW}This installer is for the legacy bash implementation.${NC}"
+echo -e "${YELLOW}For the best experience, please use the Go implementation instead:${NC}"
+echo -e "${BLUE}  cd shell-ai-go && make build && make install${NC}"
+echo -e "${BLUE}  shell-ai setup${NC}"
+echo
+read -p "Continue with legacy bash installation? (y/N): " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo -e "${GREEN}Installation cancelled. Consider using the Go implementation instead.${NC}"
+    exit 0
+fi
+echo
 
 # Function to detect user's shell
 detect_shell() {
