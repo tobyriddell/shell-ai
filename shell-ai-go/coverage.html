@@ -1,0 +1,2810 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>shell-ai-go: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">shell-ai-go/main.go (0.0%)</option>
+				
+				<option value="file1">shell-ai-go/pkg/ai/manager.go (82.8%)</option>
+				
+				<option value="file2">shell-ai-go/pkg/ai/providers/openai.go (0.0%)</option>
+				
+				<option value="file3">shell-ai-go/pkg/config/config.go (0.0%)</option>
+				
+				<option value="file4">shell-ai-go/pkg/context/gatherer.go (68.1%)</option>
+				
+				<option value="file5">shell-ai-go/pkg/contextgather/gatherer.go (68.1%)</option>
+				
+				<option value="file6">shell-ai-go/pkg/response/parser.go (91.3%)</option>
+				
+				<option value="file7">shell-ai-go/pkg/session/interactive.go (0.0%)</option>
+				
+				<option value="file8">shell-ai-go/pkg/session/oneshot.go (0.0%)</option>
+				
+				<option value="file9">shell-ai-go/pkg/tmux/client.go (24.3%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">no coverage</span>
+				<span class="cov1">low coverage</span>
+				<span class="cov2">*</span>
+				<span class="cov3">*</span>
+				<span class="cov4">*</span>
+				<span class="cov5">*</span>
+				<span class="cov6">*</span>
+				<span class="cov7">*</span>
+				<span class="cov8">*</span>
+				<span class="cov9">*</span>
+				<span class="cov10">high coverage</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "fmt"
+        "os"
+
+        "shell-ai-go/pkg/config"
+        "shell-ai-go/pkg/session"
+        "shell-ai-go/pkg/tmux"
+
+        "github.com/spf13/cobra"
+)
+
+var (
+        version        = "1.0.0"
+        cfgFile        string
+        provider       string
+        contextLines   int
+        noHistory      bool
+        noPanes        bool
+        conversational bool
+)
+
+var rootCmd = &amp;cobra.Command{
+        Use:   "shell-ai",
+        Short: "AI-enhanced shell with conversational context",
+        Long: `Shell AI Integration (Go) - An AI-enhanced shell environment that integrates
+multiple AI providers with tmux for intelligent command assistance and context-aware
+conversations.`,
+        RunE: runShellAI,
+}
+
+var interactiveCmd = &amp;cobra.Command{
+        Use:   "interactive",
+        Short: "Start interactive conversational session",
+        Long:  "Start an interactive session with the AI that maintains conversation context",
+        RunE:  runInteractiveSession,
+}
+
+var oneShotCmd = &amp;cobra.Command{
+        Use:   "ask [prompt]",
+        Short: "Ask a single question to the AI",
+        Args:  cobra.MinimumNArgs(1),
+        RunE:  runOneShot,
+}
+
+var setupCmd = &amp;cobra.Command{
+        Use:   "setup",
+        Short: "Configure AI providers",
+        RunE:  runSetup,
+}
+
+var testCmd = &amp;cobra.Command{
+        Use:   "test",
+        Short: "Test AI provider connections",
+        RunE:  runTest,
+}
+
+func init() <span class="cov0" title="0">{
+        cobra.OnInitialize(initConfig)
+
+        // Global flags
+        rootCmd.PersistentFlags().StringVar(&amp;cfgFile, "config", "", "config file (default is $HOME/.config/shell-ai/config.yaml)")
+        rootCmd.PersistentFlags().StringVarP(&amp;provider, "provider", "p", "", "AI provider to use (openai, anthropic, google, ollama)")
+        rootCmd.PersistentFlags().IntVarP(&amp;contextLines, "context-lines", "c", 50, "number of context lines to include")
+        rootCmd.PersistentFlags().BoolVar(&amp;noHistory, "no-history", false, "exclude shell history from context")
+        rootCmd.PersistentFlags().BoolVar(&amp;noPanes, "no-panes", false, "exclude tmux pane content from context")
+
+        // Interactive session flags
+        interactiveCmd.Flags().BoolVarP(&amp;conversational, "conversational", "C", true, "maintain conversation context")
+
+        // Add subcommands
+        rootCmd.AddCommand(interactiveCmd)
+        rootCmd.AddCommand(oneShotCmd)
+        rootCmd.AddCommand(setupCmd)
+        rootCmd.AddCommand(testCmd)
+}</span>
+
+func initConfig() <span class="cov0" title="0">{
+        config.InitConfig(cfgFile)
+}</span>
+
+func runShellAI(cmd *cobra.Command, args []string) error <span class="cov0" title="0">{
+        // Check if we're in tmux
+        if os.Getenv("TMUX") == "" </span><span class="cov0" title="0">{
+                fmt.Println("Warning: Not running in tmux. Some features may be limited.")
+        }</span>
+
+        // If no args provided, start interactive session
+        <span class="cov0" title="0">if len(args) == 0 </span><span class="cov0" title="0">{
+                return runInteractiveSession(cmd, args)
+        }</span>
+
+        // Otherwise, treat as one-shot query
+        <span class="cov0" title="0">return runOneShot(cmd, args)</span>
+}
+
+func runInteractiveSession(cmd *cobra.Command, args []string) error <span class="cov0" title="0">{
+        cfg, err := config.LoadConfig()
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to load config: %w", err)
+        }</span>
+
+        // Initialize tmux integration
+        <span class="cov0" title="0">tmuxClient := tmux.NewClient()
+        if !tmuxClient.IsInTmux() </span><span class="cov0" title="0">{
+                fmt.Println("Warning: Not running in tmux. Pane selection features will be disabled.")
+        }</span>
+
+        // Create interactive session
+        <span class="cov0" title="0">sess := session.NewInteractiveSession(cfg, tmuxClient)
+        return sess.Run()</span>
+}
+
+func runOneShot(cmd *cobra.Command, args []string) error <span class="cov0" title="0">{
+        cfg, err := config.LoadConfig()
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to load config: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">tmuxClient := tmux.NewClient()
+        sess := session.NewOneShot(cfg, tmuxClient)
+
+        // Join args into a single prompt
+        prompt := ""
+        for i, arg := range args </span><span class="cov0" title="0">{
+                if i &gt; 0 </span><span class="cov0" title="0">{
+                        prompt += " "
+                }</span>
+                <span class="cov0" title="0">prompt += arg</span>
+        }
+
+        <span class="cov0" title="0">return sess.Ask(prompt)</span>
+}
+
+func runSetup(cmd *cobra.Command, args []string) error <span class="cov0" title="0">{
+        cfg, err := config.LoadConfig()
+        if err != nil </span><span class="cov0" title="0">{
+                // If config doesn't exist, create a default one
+                cfg = config.NewDefaultConfig()
+        }</span>
+
+        <span class="cov0" title="0">return config.RunSetup(cfg)</span>
+}
+
+func runTest(cmd *cobra.Command, args []string) error <span class="cov0" title="0">{
+        cfg, err := config.LoadConfig()
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to load config: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">return config.TestProviders(cfg)</span>
+}
+
+func main() <span class="cov0" title="0">{
+        if err := rootCmd.Execute(); err != nil </span><span class="cov0" title="0">{
+                fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+                os.Exit(1)
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package ai
+
+import (
+        "context"
+        "fmt"
+        "sort"
+        "time"
+)
+
+// Manager manages AI providers and conversations
+type Manager struct {
+        providers      map[string]Provider
+        activeProvider string
+        conversations  map[string]*Conversation
+}
+
+// NewManager creates a new AI manager
+func NewManager() *Manager <span class="cov8" title="8">{
+        return &amp;Manager{
+                providers:     make(map[string]Provider),
+                conversations: make(map[string]*Conversation),
+        }
+}</span>
+
+// RegisterProvider registers an AI provider
+func (m *Manager) RegisterProvider(name string, provider Provider) <span class="cov10" title="14">{
+        m.providers[name] = provider
+}</span>
+
+// GetProvider returns a provider by name
+func (m *Manager) GetProvider(name string) (Provider, bool) <span class="cov1" title="1">{
+        provider, exists := m.providers[name]
+        return provider, exists
+}</span>
+
+// ListProviders returns all registered providers
+func (m *Manager) ListProviders() []string <span class="cov3" title="2">{
+        var names []string
+        for name := range m.providers </span><span class="cov4" title="3">{
+                names = append(names, name)
+        }</span>
+        <span class="cov3" title="2">sort.Strings(names)
+        return names</span>
+}
+
+// GetEnabledProviders returns all enabled providers
+func (m *Manager) GetEnabledProviders() []Provider <span class="cov3" title="2">{
+        var enabled []Provider
+        for _, provider := range m.providers </span><span class="cov5" title="4">{
+                if provider.IsEnabled() &amp;&amp; provider.IsConfigured() </span><span class="cov3" title="2">{
+                        enabled = append(enabled, provider)
+                }</span>
+        }
+        <span class="cov3" title="2">return enabled</span>
+}
+
+// SetActiveProvider sets the active provider
+func (m *Manager) SetActiveProvider(name string) error <span class="cov6" title="5">{
+        provider, exists := m.providers[name]
+        if !exists </span><span class="cov1" title="1">{
+                return fmt.Errorf("provider %s not found", name)
+        }</span>
+
+        <span class="cov5" title="4">if !provider.IsConfigured() </span><span class="cov0" title="0">{
+                return fmt.Errorf("provider %s is not configured", name)
+        }</span>
+
+        <span class="cov5" title="4">if !provider.IsEnabled() </span><span class="cov1" title="1">{
+                return fmt.Errorf("provider %s is not enabled", name)
+        }</span>
+
+        <span class="cov4" title="3">m.activeProvider = name
+        return nil</span>
+}
+
+// GetActiveProvider returns the current active provider
+func (m *Manager) GetActiveProvider() (Provider, error) <span class="cov4" title="3">{
+        if m.activeProvider == "" </span><span class="cov1" title="1">{
+                // Try to find the first enabled provider
+                enabled := m.GetEnabledProviders()
+                if len(enabled) == 0 </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("no enabled providers found")
+                }</span>
+                <span class="cov1" title="1">m.activeProvider = enabled[0].Name()</span>
+        }
+
+        <span class="cov4" title="3">provider, exists := m.providers[m.activeProvider]
+        if !exists </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("active provider %s not found", m.activeProvider)
+        }</span>
+
+        <span class="cov4" title="3">return provider, nil</span>
+}
+
+// GetOrCreateConversation gets or creates a conversation
+func (m *Manager) GetOrCreateConversation(id string) *Conversation <span class="cov8" title="9">{
+        if conv, exists := m.conversations[id]; exists </span><span class="cov7" title="7">{
+                return conv
+        }</span>
+
+        <span class="cov3" title="2">conv := &amp;Conversation{
+                ID:       id,
+                Messages: make([]Message, 0),
+                Created:  time.Now(),
+                Updated:  time.Now(),
+        }
+
+        m.conversations[id] = conv
+        return conv</span>
+}
+
+// AddMessage adds a message to a conversation
+func (m *Manager) AddMessage(conversationID string, role MessageRole, content string) <span class="cov5" title="4">{
+        conv := m.GetOrCreateConversation(conversationID)
+
+        message := Message{
+                Role:      role,
+                Content:   content,
+                Timestamp: time.Now(),
+        }
+
+        conv.Messages = append(conv.Messages, message)
+        conv.Updated = time.Now()
+}</span>
+
+// Chat sends a message and gets a response
+func (m *Manager) Chat(ctx context.Context, conversationID, prompt string) (*Response, error) <span class="cov1" title="1">{
+        provider, err := m.GetActiveProvider()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        // Add user message to conversation
+        <span class="cov1" title="1">m.AddMessage(conversationID, RoleUser, prompt)
+
+        // Get conversation
+        conversation := m.GetOrCreateConversation(conversationID)
+
+        // Send to provider
+        start := time.Now()
+        response, err := provider.Chat(ctx, conversation)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("provider error: %w", err)
+        }</span>
+
+        // Add assistant response to conversation
+        <span class="cov1" title="1">m.AddMessage(conversationID, RoleAssistant, response.Content)
+
+        return &amp;Response{
+                Content:      response.Content,
+                Provider:     provider.Name(),
+                ResponseTime: time.Since(start),
+        }, nil</span>
+}
+
+// TestProvider tests a specific provider
+func (m *Manager) TestProvider(ctx context.Context, name string) error <span class="cov0" title="0">{
+        provider, exists := m.providers[name]
+        if !exists </span><span class="cov0" title="0">{
+                return fmt.Errorf("provider %s not found", name)
+        }</span>
+
+        <span class="cov0" title="0">if !provider.IsConfigured() </span><span class="cov0" title="0">{
+                return fmt.Errorf("provider %s is not configured", name)
+        }</span>
+
+        <span class="cov0" title="0">return provider.Test(ctx)</span>
+}
+
+// TestAllProviders tests all configured providers
+func (m *Manager) TestAllProviders(ctx context.Context) map[string]error <span class="cov1" title="1">{
+        results := make(map[string]error)
+
+        for name, provider := range m.providers </span><span class="cov4" title="3">{
+                if provider.IsConfigured() </span><span class="cov3" title="2">{
+                        results[name] = provider.Test(ctx)
+                }</span> else<span class="cov1" title="1"> {
+                        results[name] = fmt.Errorf("not configured")
+                }</span>
+        }
+
+        <span class="cov1" title="1">return results</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package providers
+
+import (
+        "bytes"
+        "context"
+        "encoding/json"
+        "fmt"
+        "io"
+        "net/http"
+        "time"
+
+        "shell-ai-go/pkg/ai"
+)
+
+// OpenAIProvider implements the OpenAI API provider
+type OpenAIProvider struct {
+        config *ai.ProviderConfig
+}
+
+// NewOpenAIProvider creates a new OpenAI provider
+func NewOpenAIProvider(config *ai.ProviderConfig) *OpenAIProvider <span class="cov0" title="0">{
+        if config.MaxTokens == 0 </span><span class="cov0" title="0">{
+                config.MaxTokens = 2000
+        }</span>
+        <span class="cov0" title="0">if config.Temperature == 0 </span><span class="cov0" title="0">{
+                config.Temperature = 0.7
+        }</span>
+        <span class="cov0" title="0">if config.Model == "" </span><span class="cov0" title="0">{
+                config.Model = "gpt-3.5-turbo"
+        }</span>
+        <span class="cov0" title="0">if config.BaseURL == "" </span><span class="cov0" title="0">{
+                config.BaseURL = "https://api.openai.com/v1"
+        }</span>
+
+        <span class="cov0" title="0">return &amp;OpenAIProvider{config: config}</span>
+}
+
+// Name returns the provider name
+func (p *OpenAIProvider) Name() string <span class="cov0" title="0">{
+        return "openai"
+}</span>
+
+// IsConfigured checks if the provider is properly configured
+func (p *OpenAIProvider) IsConfigured() bool <span class="cov0" title="0">{
+        return p.config != nil &amp;&amp; p.config.APIKey != ""
+}</span>
+
+// IsEnabled checks if the provider is enabled
+func (p *OpenAIProvider) IsEnabled() bool <span class="cov0" title="0">{
+        return p.config != nil &amp;&amp; p.config.Enabled
+}</span>
+
+// openAIRequest represents the request structure for OpenAI API
+type openAIRequest struct {
+        Model       string          `json:"model"`
+        Messages    []openAIMessage `json:"messages"`
+        MaxTokens   int             `json:"max_tokens"`
+        Temperature float64         `json:"temperature"`
+        Stream      bool            `json:"stream,omitempty"`
+}
+
+// openAIMessage represents a message in the OpenAI format
+type openAIMessage struct {
+        Role    string `json:"role"`
+        Content string `json:"content"`
+}
+
+// openAIResponse represents the response from OpenAI API
+type openAIResponse struct {
+        Choices []struct {
+                Message openAIMessage `json:"message"`
+        } `json:"choices"`
+        Error *struct {
+                Message string `json:"message"`
+        } `json:"error,omitempty"`
+}
+
+// Chat sends a message and returns the response
+func (p *OpenAIProvider) Chat(ctx context.Context, conversation *ai.Conversation) (*ai.Message, error) <span class="cov0" title="0">{
+        if !p.IsConfigured() </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("OpenAI provider not configured")
+        }</span>
+
+        // Convert conversation to OpenAI format
+        <span class="cov0" title="0">messages := make([]openAIMessage, len(conversation.Messages))
+        for i, msg := range conversation.Messages </span><span class="cov0" title="0">{
+                messages[i] = openAIMessage{
+                        Role:    string(msg.Role),
+                        Content: msg.Content,
+                }
+        }</span>
+
+        <span class="cov0" title="0">request := openAIRequest{
+                Model:       p.config.Model,
+                Messages:    messages,
+                MaxTokens:   p.config.MaxTokens,
+                Temperature: p.config.Temperature,
+        }
+
+        reqBody, err := json.Marshal(request)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to marshal request: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">url := fmt.Sprintf("%s/chat/completions", p.config.BaseURL)
+        req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(reqBody))
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to create request: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">req.Header.Set("Content-Type", "application/json")
+        req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", p.config.APIKey))
+
+        client := &amp;http.Client{Timeout: 30 * time.Second}
+        resp, err := client.Do(req)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to send request: %w", err)
+        }</span>
+        <span class="cov0" title="0">defer resp.Body.Close()
+
+        respBody, err := io.ReadAll(resp.Body)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to read response: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if resp.StatusCode != http.StatusOK </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(respBody))
+        }</span>
+
+        <span class="cov0" title="0">var openAIResp openAIResponse
+        if err := json.Unmarshal(respBody, &amp;openAIResp); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to parse response: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if openAIResp.Error != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("OpenAI API error: %s", openAIResp.Error.Message)
+        }</span>
+
+        <span class="cov0" title="0">if len(openAIResp.Choices) == 0 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("no response choices received")
+        }</span>
+
+        <span class="cov0" title="0">return &amp;ai.Message{
+                Role:      ai.RoleAssistant,
+                Content:   openAIResp.Choices[0].Message.Content,
+                Timestamp: time.Now(),
+        }, nil</span>
+}
+
+// ChatStream sends a message and streams the response
+func (p *OpenAIProvider) ChatStream(ctx context.Context, conversation *ai.Conversation) (io.ReadCloser, error) <span class="cov0" title="0">{
+        // For now, implement as non-streaming
+        // TODO: Implement proper streaming
+        message, err := p.Chat(ctx, conversation)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">return io.NopCloser(bytes.NewReader([]byte(message.Content))), nil</span>
+}
+
+// Test performs a connection test
+func (p *OpenAIProvider) Test(ctx context.Context) error <span class="cov0" title="0">{
+        if !p.IsConfigured() </span><span class="cov0" title="0">{
+                return fmt.Errorf("provider not configured")
+        }</span>
+
+        // Create a simple test conversation
+        <span class="cov0" title="0">testConv := &amp;ai.Conversation{
+                ID: "test",
+                Messages: []ai.Message{
+                        {
+                                Role:    ai.RoleUser,
+                                Content: "Hello, respond with just 'OK' to confirm you're working.",
+                        },
+                },
+        }
+
+        response, err := p.Chat(ctx, testConv)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("test failed: %w", err)
+        }</span>
+
+        // Check if response contains "OK" (case insensitive)
+        <span class="cov0" title="0">if response.Content == "" </span><span class="cov0" title="0">{
+                return fmt.Errorf("received empty response")
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+// Setup configures the provider interactively
+func (p *OpenAIProvider) Setup() error <span class="cov0" title="0">{
+        fmt.Print("Enter OpenAI API Key: ")
+        var apiKey string
+        fmt.Scanln(&amp;apiKey)
+
+        if apiKey == "" </span><span class="cov0" title="0">{
+                return fmt.Errorf("API key cannot be empty")
+        }</span>
+
+        <span class="cov0" title="0">fmt.Print("Enter model (default: gpt-3.5-turbo): ")
+        var model string
+        fmt.Scanln(&amp;model)
+        if model == "" </span><span class="cov0" title="0">{
+                model = "gpt-3.5-turbo"
+        }</span>
+
+        <span class="cov0" title="0">fmt.Print("Enable provider? [Y/n]: ")
+        var enable string
+        fmt.Scanln(&amp;enable)
+        enabled := enable != "n" &amp;&amp; enable != "N"
+
+        p.config.APIKey = apiKey
+        p.config.Model = model
+        p.config.Enabled = enabled
+
+        return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package config
+
+import (
+        "context"
+        "fmt"
+        "os"
+        "path/filepath"
+        "time"
+
+        "shell-ai-go/pkg/ai"
+        "shell-ai-go/pkg/ai/providers"
+
+        "github.com/spf13/viper"
+)
+
+// Config represents the application configuration
+type Config struct {
+        Providers map[string]*ai.ProviderConfig `yaml:"providers"`
+        Settings  *Settings                     `yaml:"settings"`
+}
+
+// Settings contains application settings
+type Settings struct {
+        AutoCopy        bool   `yaml:"auto_copy"`
+        AutoCopyPrompt  bool   `yaml:"auto_copy_prompt"`
+        DefaultProvider string `yaml:"default_provider"`
+        MaxHistoryLines int    `yaml:"max_history_lines"`
+        MaxPaneLines    int    `yaml:"max_pane_lines"`
+        ConversationTTL int    `yaml:"conversation_ttl_hours"`
+}
+
+var (
+        configDir  string
+        configFile string
+)
+
+// InitConfig initializes the configuration system
+func InitConfig(cfgFile string) <span class="cov0" title="0">{
+        if cfgFile != "" </span><span class="cov0" title="0">{
+                viper.SetConfigFile(cfgFile)
+        }</span> else<span class="cov0" title="0"> {
+                home, err := os.UserHomeDir()
+                if err != nil </span><span class="cov0" title="0">{
+                        fmt.Printf("Error getting home directory: %v\n", err)
+                        os.Exit(1)
+                }</span>
+
+                <span class="cov0" title="0">configDir = filepath.Join(home, ".config", "shell-ai")
+                configFile = filepath.Join(configDir, "config.yaml")
+
+                // Create config directory if it doesn't exist
+                if err := os.MkdirAll(configDir, 0755); err != nil </span><span class="cov0" title="0">{
+                        fmt.Printf("Error creating config directory: %v\n", err)
+                        os.Exit(1)
+                }</span>
+
+                <span class="cov0" title="0">viper.AddConfigPath(configDir)
+                viper.SetConfigName("config")
+                viper.SetConfigType("yaml")</span>
+        }
+
+        // Set defaults
+        <span class="cov0" title="0">viper.SetDefault("settings.auto_copy", false)
+        viper.SetDefault("settings.auto_copy_prompt", true)
+        viper.SetDefault("settings.max_history_lines", 50)
+        viper.SetDefault("settings.max_pane_lines", 100)
+        viper.SetDefault("settings.conversation_ttl_hours", 24)
+
+        // Read environment variables
+        viper.AutomaticEnv()
+        viper.SetEnvPrefix("SHELL_AI")
+
+        // Try to read config file
+        if err := viper.ReadInConfig(); err != nil </span><span class="cov0" title="0">{
+                if _, ok := err.(viper.ConfigFileNotFoundError); !ok </span><span class="cov0" title="0">{
+                        fmt.Printf("Error reading config file: %v\n", err)
+                }</span>
+        }
+}
+
+// LoadConfig loads the configuration
+func LoadConfig() (*Config, error) <span class="cov0" title="0">{
+        config := &amp;Config{}
+
+        if err := viper.Unmarshal(config); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+        }</span>
+
+        // Ensure settings exist
+        <span class="cov0" title="0">if config.Settings == nil </span><span class="cov0" title="0">{
+                config.Settings = NewDefaultSettings()
+        }</span>
+
+        // Ensure providers map exists
+        <span class="cov0" title="0">if config.Providers == nil </span><span class="cov0" title="0">{
+                config.Providers = make(map[string]*ai.ProviderConfig)
+        }</span>
+
+        // Set defaults for providers if they don't exist
+        <span class="cov0" title="0">if _, exists := config.Providers["openai"]; !exists </span><span class="cov0" title="0">{
+                config.Providers["openai"] = &amp;ai.ProviderConfig{
+                        Name:        "openai",
+                        Enabled:     false,
+                        Model:       "gpt-3.5-turbo",
+                        MaxTokens:   2000,
+                        Temperature: 0.7,
+                }
+        }</span>
+
+        <span class="cov0" title="0">if _, exists := config.Providers["anthropic"]; !exists </span><span class="cov0" title="0">{
+                config.Providers["anthropic"] = &amp;ai.ProviderConfig{
+                        Name:        "anthropic",
+                        Enabled:     false,
+                        Model:       "claude-3-haiku-20240307",
+                        MaxTokens:   2000,
+                        Temperature: 0.7,
+                }
+        }</span>
+
+        <span class="cov0" title="0">if _, exists := config.Providers["google"]; !exists </span><span class="cov0" title="0">{
+                config.Providers["google"] = &amp;ai.ProviderConfig{
+                        Name:        "google",
+                        Enabled:     false,
+                        Model:       "gemini-1.5-flash",
+                        MaxTokens:   2000,
+                        Temperature: 0.7,
+                }
+        }</span>
+
+        <span class="cov0" title="0">if _, exists := config.Providers["ollama"]; !exists </span><span class="cov0" title="0">{
+                config.Providers["ollama"] = &amp;ai.ProviderConfig{
+                        Name:        "ollama",
+                        Enabled:     false,
+                        Model:       "llama2",
+                        BaseURL:     "http://localhost:11434",
+                        MaxTokens:   2000,
+                        Temperature: 0.7,
+                }
+        }</span>
+
+        <span class="cov0" title="0">return config, nil</span>
+}
+
+// SaveConfig saves the configuration
+func SaveConfig(config *Config) error <span class="cov0" title="0">{
+        // Update viper with new config
+        viper.Set("providers", config.Providers)
+        viper.Set("settings", config.Settings)
+
+        return viper.WriteConfig()
+}</span>
+
+// NewDefaultConfig creates a default configuration
+func NewDefaultConfig() *Config <span class="cov0" title="0">{
+        return &amp;Config{
+                Providers: map[string]*ai.ProviderConfig{
+                        "openai": {
+                                Name:        "openai",
+                                Enabled:     false,
+                                Model:       "gpt-3.5-turbo",
+                                MaxTokens:   2000,
+                                Temperature: 0.7,
+                        },
+                        "anthropic": {
+                                Name:        "anthropic",
+                                Enabled:     false,
+                                Model:       "claude-3-haiku-20240307",
+                                MaxTokens:   2000,
+                                Temperature: 0.7,
+                        },
+                        "google": {
+                                Name:        "google",
+                                Enabled:     false,
+                                Model:       "gemini-1.5-flash",
+                                MaxTokens:   2000,
+                                Temperature: 0.7,
+                        },
+                        "ollama": {
+                                Name:        "ollama",
+                                Enabled:     false,
+                                Model:       "llama2",
+                                BaseURL:     "http://localhost:11434",
+                                MaxTokens:   2000,
+                                Temperature: 0.7,
+                        },
+                },
+                Settings: NewDefaultSettings(),
+        }
+}</span>
+
+// NewDefaultSettings creates default settings
+func NewDefaultSettings() *Settings <span class="cov0" title="0">{
+        return &amp;Settings{
+                AutoCopy:        false,
+                AutoCopyPrompt:  true,
+                MaxHistoryLines: 50,
+                MaxPaneLines:    100,
+                ConversationTTL: 24,
+        }
+}</span>
+
+// GetConfigDir returns the configuration directory
+func GetConfigDir() string <span class="cov0" title="0">{
+        return configDir
+}</span>
+
+// CreateAIManager creates an AI manager from the configuration
+func (c *Config) CreateAIManager() *ai.Manager <span class="cov0" title="0">{
+        manager := ai.NewManager()
+
+        // Register providers
+        for name, providerConfig := range c.Providers </span><span class="cov0" title="0">{
+                var provider ai.Provider
+
+                switch name </span>{
+                case "openai":<span class="cov0" title="0">
+                        provider = providers.NewOpenAIProvider(providerConfig)</span>
+                case "anthropic":<span class="cov0" title="0">
+                        // TODO: Implement Anthropic provider
+                        continue</span>
+                case "google":<span class="cov0" title="0">
+                        // TODO: Implement Google provider
+                        continue</span>
+                case "ollama":<span class="cov0" title="0">
+                        // TODO: Implement Ollama provider
+                        continue</span>
+                default:<span class="cov0" title="0">
+                        continue</span>
+                }
+
+                <span class="cov0" title="0">manager.RegisterProvider(name, provider)</span>
+        }
+
+        // Set default provider if configured
+        <span class="cov0" title="0">if c.Settings.DefaultProvider != "" </span><span class="cov0" title="0">{
+                manager.SetActiveProvider(c.Settings.DefaultProvider)
+        }</span>
+
+        <span class="cov0" title="0">return manager</span>
+}
+
+// RunSetup runs the interactive setup process
+func RunSetup(config *Config) error <span class="cov0" title="0">{
+        fmt.Println("Shell AI Configuration Setup")
+        fmt.Println("============================")
+        fmt.Println()
+
+        // Setup each provider
+        for name, providerConfig := range config.Providers </span><span class="cov0" title="0">{
+                fmt.Printf("Configure %s provider? [y/N]: ", name)
+                var response string
+                fmt.Scanln(&amp;response)
+
+                if response == "y" || response == "Y" </span><span class="cov0" title="0">{
+                        var provider ai.Provider
+
+                        switch name </span>{
+                        case "openai":<span class="cov0" title="0">
+                                provider = providers.NewOpenAIProvider(providerConfig)</span>
+                        case "anthropic":<span class="cov0" title="0">
+                                // TODO: Implement setup
+                                fmt.Printf("Anthropic provider not yet implemented\n")
+                                continue</span>
+                        case "google":<span class="cov0" title="0">
+                                // TODO: Implement setup
+                                fmt.Printf("Google provider not yet implemented\n")
+                                continue</span>
+                        case "ollama":<span class="cov0" title="0">
+                                // TODO: Implement setup
+                                fmt.Printf("Ollama provider not yet implemented\n")
+                                continue</span>
+                        }
+
+                        <span class="cov0" title="0">if provider != nil </span><span class="cov0" title="0">{
+                                if err := provider.Setup(); err != nil </span><span class="cov0" title="0">{
+                                        fmt.Printf("Error setting up %s: %v\n", name, err)
+                                }</span> else<span class="cov0" title="0"> {
+                                        fmt.Printf("%s configured successfully!\n", name)
+                                }</span>
+                        }
+                }
+                <span class="cov0" title="0">fmt.Println()</span>
+        }
+
+        // General settings
+        <span class="cov0" title="0">fmt.Println("General Settings")
+        fmt.Println("----------------")
+
+        fmt.Printf("Auto-copy responses to tmux panes? [y/N]: ")
+        var autoCopy string
+        fmt.Scanln(&amp;autoCopy)
+        config.Settings.AutoCopy = autoCopy == "y" || autoCopy == "Y"
+
+        fmt.Printf("Max shell history lines (default: %d): ", config.Settings.MaxHistoryLines)
+        var histLines string
+        fmt.Scanln(&amp;histLines)
+        if histLines != "" </span><span class="cov0" title="0">{
+                var lines int
+                if _, err := fmt.Sscanf(histLines, "%d", &amp;lines); err == nil &amp;&amp; lines &gt; 0 </span><span class="cov0" title="0">{
+                        config.Settings.MaxHistoryLines = lines
+                }</span>
+        }
+
+        // Save configuration
+        <span class="cov0" title="0">return SaveConfig(config)</span>
+}
+
+// TestProviders tests all configured providers
+func TestProviders(config *Config) error <span class="cov0" title="0">{
+        manager := config.CreateAIManager()
+
+        fmt.Println("Testing AI Providers")
+        fmt.Println("===================")
+        fmt.Println()
+
+        ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+        defer cancel()
+
+        results := manager.TestAllProviders(ctx)
+
+        for provider, err := range results </span><span class="cov0" title="0">{
+                if err != nil </span><span class="cov0" title="0">{
+                        fmt.Printf("❌ %s: %v\n", provider, err)
+                }</span> else<span class="cov0" title="0"> {
+                        fmt.Printf("✅ %s: OK\n", provider)
+                }</span>
+        }
+
+        <span class="cov0" title="0">fmt.Println()
+        return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package contextgather
+
+import (
+        "bufio"
+        "fmt"
+        "os"
+        "os/exec"
+        "os/user"
+        "path/filepath"
+        "runtime"
+        "strings"
+
+        "shell-ai-go/pkg/ai"
+        "shell-ai-go/pkg/tmux"
+)
+
+// Gatherer collects context information for AI requests
+type Gatherer struct {
+        tmuxClient     *tmux.Client
+        maxHistLines   int
+        includeHistory bool
+        includePanes   bool
+}
+
+// NewGatherer creates a new context gatherer
+func NewGatherer(tmuxClient *tmux.Client) *Gatherer <span class="cov7" title="10">{
+        return &amp;Gatherer{
+                tmuxClient:     tmuxClient,
+                maxHistLines:   50,
+                includeHistory: true,
+                includePanes:   true,
+        }
+}</span>
+
+// SetOptions configures the gatherer
+func (g *Gatherer) SetOptions(maxHistLines int, includeHistory, includePanes bool) <span class="cov3" title="2">{
+        g.maxHistLines = maxHistLines
+        g.includeHistory = includeHistory
+        g.includePanes = includePanes
+}</span>
+
+// GatherContext collects all context information
+func (g *Gatherer) GatherContext() (*ai.ContextData, error) <span class="cov1" title="1">{
+        context := &amp;ai.ContextData{}
+
+        // System information
+        sysInfo, err := g.gatherSystemInfo()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to gather system info: %w", err)
+        }</span>
+        <span class="cov1" title="1">context.SystemInfo = *sysInfo
+
+        // Working directory
+        wd, err := os.Getwd()
+        if err != nil </span><span class="cov0" title="0">{
+                wd = "unknown"
+        }</span>
+        <span class="cov1" title="1">context.WorkingDir = wd
+
+        // Environment variables (filtered)
+        context.Environment = g.gatherEnvironment()
+
+        // Shell history
+        if g.includeHistory </span><span class="cov0" title="0">{
+                history, err := g.gatherShellHistory()
+                if err == nil </span><span class="cov0" title="0">{
+                        context.ShellHistory = history
+                }</span>
+        }
+
+        // Tmux pane content
+        <span class="cov1" title="1">if g.includePanes &amp;&amp; g.tmuxClient.IsInTmux() </span><span class="cov0" title="0">{
+                paneContent, err := g.tmuxClient.CapturePaneContent()
+                if err == nil </span><span class="cov0" title="0">{
+                        context.TmuxContent = paneContent
+                }</span>
+        }
+
+        <span class="cov1" title="1">return context, nil</span>
+}
+
+// gatherSystemInfo collects system information
+func (g *Gatherer) gatherSystemInfo() (*ai.SystemInfo, error) <span class="cov3" title="2">{
+        info := &amp;ai.SystemInfo{
+                OS: runtime.GOOS,
+        }
+
+        // Get hostname
+        hostname, err := os.Hostname()
+        if err == nil </span><span class="cov3" title="2">{
+                info.Hostname = hostname
+        }</span>
+
+        // Get current user
+        <span class="cov3" title="2">currentUser, err := user.Current()
+        if err == nil </span><span class="cov3" title="2">{
+                info.User = currentUser.Username
+        }</span>
+
+        // Get shell
+        <span class="cov3" title="2">shell := os.Getenv("SHELL")
+        if shell == "" </span><span class="cov0" title="0">{
+                shell = "unknown"
+        }</span> else<span class="cov3" title="2"> {
+                shell = filepath.Base(shell)
+        }</span>
+        <span class="cov3" title="2">info.Shell = shell
+
+        return info, nil</span>
+}
+
+// gatherEnvironment collects relevant environment variables
+func (g *Gatherer) gatherEnvironment() []string <span class="cov3" title="2">{
+        // Only include relevant environment variables
+        relevant := []string{
+                "PATH", "HOME", "USER", "SHELL", "TERM", "PWD",
+                "LANG", "LC_ALL", "EDITOR", "PAGER",
+        }
+
+        var env []string
+        for _, key := range relevant </span><span class="cov10" title="20">{
+                if value := os.Getenv(key); value != "" </span><span class="cov9" title="16">{
+                        env = append(env, fmt.Sprintf("%s=%s", key, value))
+                }</span>
+        }
+
+        <span class="cov3" title="2">return env</span>
+}
+
+// gatherShellHistory collects shell command history
+func (g *Gatherer) gatherShellHistory() ([]string, error) <span class="cov0" title="0">{
+        // Try atuin first (enhanced history)
+        if history, err := g.getAtuinHistory(); err == nil &amp;&amp; len(history) &gt; 0 </span><span class="cov0" title="0">{
+                return history, nil
+        }</span>
+
+        // Fall back to shell-specific history
+        <span class="cov0" title="0">shell := os.Getenv("SHELL")
+        if strings.Contains(shell, "zsh") </span><span class="cov0" title="0">{
+                return g.getZshHistory()
+        }</span> else<span class="cov0" title="0"> if strings.Contains(shell, "bash") </span><span class="cov0" title="0">{
+                return g.getBashHistory()
+        }</span>
+
+        <span class="cov0" title="0">return nil, fmt.Errorf("unsupported shell for history: %s", shell)</span>
+}
+
+// getAtuinHistory gets history from atuin if available
+func (g *Gatherer) getAtuinHistory() ([]string, error) <span class="cov1" title="1">{
+        // Check if invoked from tmux - if so, use global history instead of session-specific
+        var cmd *exec.Cmd
+        if os.Getenv("AI_SHELL_TMUX_INVOKED") != "" || g.tmuxClient.IsInTmux() </span><span class="cov0" title="0">{
+                // Use global history when invoked from tmux (drop -s flag)
+                cmd = exec.Command("atuin", "history", "list", "-f", "{command}")
+        }</span> else<span class="cov1" title="1"> {
+                // Use session-specific history for normal invocations
+                cmd = exec.Command("atuin", "history", "list", "-s", "-f", "{command}")
+        }</span>
+
+        <span class="cov1" title="1">output, err := cmd.Output()
+        if err != nil </span><span class="cov1" title="1">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">lines := strings.Split(string(output), "\n")
+
+        // Filter out empty lines and get last N lines
+        var filteredLines []string
+        for _, line := range lines </span><span class="cov0" title="0">{
+                line = strings.TrimSpace(line)
+                if line != "" </span><span class="cov0" title="0">{
+                        filteredLines = append(filteredLines, line)
+                }</span>
+        }
+
+        // Get last N lines
+        <span class="cov0" title="0">start := 0
+        if len(filteredLines) &gt; g.maxHistLines </span><span class="cov0" title="0">{
+                start = len(filteredLines) - g.maxHistLines
+        }</span>
+
+        <span class="cov0" title="0">return filteredLines[start:], nil</span>
+}
+
+// getZshHistory gets history from zsh
+func (g *Gatherer) getZshHistory() ([]string, error) <span class="cov0" title="0">{
+        // Try fc command first
+        cmd := exec.Command("fc", "-l", fmt.Sprintf("-%d", g.maxHistLines))
+        output, err := cmd.Output()
+        if err == nil </span><span class="cov0" title="0">{
+                lines := strings.Split(string(output), "\n")
+                var history []string
+                for _, line := range lines </span><span class="cov0" title="0">{
+                        // Remove line numbers from fc output
+                        if idx := strings.Index(line, " "); idx &gt; 0 &amp;&amp; idx &lt; 10 </span><span class="cov0" title="0">{
+                                cmd := strings.TrimSpace(line[idx:])
+                                if cmd != "" </span><span class="cov0" title="0">{
+                                        history = append(history, cmd)
+                                }</span>
+                        }
+                }
+                <span class="cov0" title="0">return history, nil</span>
+        }
+
+        // Fall back to history file
+        <span class="cov0" title="0">return g.readHistoryFile("~/.zsh_history")</span>
+}
+
+// getBashHistory gets history from bash
+func (g *Gatherer) getBashHistory() ([]string, error) <span class="cov0" title="0">{
+        return g.readHistoryFile("~/.bash_history")
+}</span>
+
+// readHistoryFile reads commands from a history file
+func (g *Gatherer) readHistoryFile(filename string) ([]string, error) <span class="cov3" title="2">{
+        // Expand home directory
+        home, err := os.UserHomeDir()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov3" title="2">if strings.HasPrefix(filename, "~/") </span><span class="cov1" title="1">{
+                filename = filepath.Join(home, filename[2:])
+        }</span>
+
+        <span class="cov3" title="2">file, err := os.Open(filename)
+        if err != nil </span><span class="cov1" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov1" title="1">defer file.Close()
+
+        var lines []string
+        scanner := bufio.NewScanner(file)
+        for scanner.Scan() </span><span class="cov7" title="8">{
+                line := strings.TrimSpace(scanner.Text())
+                if line != "" &amp;&amp; !strings.HasPrefix(line, "#") </span><span class="cov5" title="5">{
+                        lines = append(lines, line)
+                }</span>
+        }
+
+        // Get last N lines
+        <span class="cov1" title="1">start := 0
+        if len(lines) &gt; g.maxHistLines </span><span class="cov1" title="1">{
+                start = len(lines) - g.maxHistLines
+        }</span>
+
+        <span class="cov1" title="1">return lines[start:], scanner.Err()</span>
+}
+
+// FormatContext formats context data for AI consumption
+func (g *Gatherer) FormatContext(ctx *ai.ContextData, conversation *ai.Conversation) string <span class="cov3" title="2">{
+        var builder strings.Builder
+
+        // System context
+        builder.WriteString("=== SYSTEM CONTEXT ===\n")
+        builder.WriteString(fmt.Sprintf("OS: %s\n", ctx.SystemInfo.OS))
+        builder.WriteString(fmt.Sprintf("Hostname: %s\n", ctx.SystemInfo.Hostname))
+        builder.WriteString(fmt.Sprintf("User: %s\n", ctx.SystemInfo.User))
+        builder.WriteString(fmt.Sprintf("Shell: %s\n", ctx.SystemInfo.Shell))
+        builder.WriteString(fmt.Sprintf("Working Directory: %s\n", ctx.WorkingDir))
+        builder.WriteString("\n")
+
+        // Environment
+        if len(ctx.Environment) &gt; 0 </span><span class="cov1" title="1">{
+                builder.WriteString("=== ENVIRONMENT ===\n")
+                for _, env := range ctx.Environment </span><span class="cov3" title="2">{
+                        builder.WriteString(fmt.Sprintf("%s\n", env))
+                }</span>
+                <span class="cov1" title="1">builder.WriteString("\n")</span>
+        }
+
+        // Shell history
+        <span class="cov3" title="2">if len(ctx.ShellHistory) &gt; 0 </span><span class="cov1" title="1">{
+                builder.WriteString("=== RECENT SHELL HISTORY ===\n")
+                for _, cmd := range ctx.ShellHistory </span><span class="cov4" title="3">{
+                        builder.WriteString(fmt.Sprintf("%s\n", cmd))
+                }</span>
+                <span class="cov1" title="1">builder.WriteString("=== END OF SHELL HISTORY ===\n\n")</span>
+        }
+
+        // Tmux content
+        <span class="cov3" title="2">if len(ctx.TmuxContent) &gt; 0 </span><span class="cov1" title="1">{
+                builder.WriteString("=== TMUX WINDOW CONTENT ===\n")
+                for _, pane := range ctx.TmuxContent </span><span class="cov1" title="1">{
+                        marker := fmt.Sprintf("PANE %s", pane.PaneID)
+                        if pane.IsActive </span><span class="cov1" title="1">{
+                                marker += " (ACTIVE)"
+                        }</span>
+                        <span class="cov1" title="1">if pane.Title != "" &amp;&amp; pane.Title != "bash" &amp;&amp; pane.Title != "zsh" </span><span class="cov0" title="0">{
+                                marker += fmt.Sprintf(" - %s", pane.Title)
+                        }</span>
+
+                        <span class="cov1" title="1">builder.WriteString(fmt.Sprintf("\n--- %s ---\n", marker))
+                        if pane.Content != "" </span><span class="cov1" title="1">{
+                                builder.WriteString(pane.Content)
+                                builder.WriteString("\n")
+                        }</span> else<span class="cov0" title="0"> {
+                                builder.WriteString("(empty pane)\n")
+                        }</span>
+                }
+                <span class="cov1" title="1">builder.WriteString("\n=== END TMUX CONTENT ===\n\n")</span>
+        }
+
+        // Conversation history
+        <span class="cov3" title="2">if conversation != nil &amp;&amp; len(conversation.Messages) &gt; 0 </span><span class="cov1" title="1">{
+                builder.WriteString("=== CONVERSATION HISTORY ===\n")
+                for _, msg := range conversation.Messages </span><span class="cov3" title="2">{
+                        role := strings.ToUpper(string(msg.Role))
+                        builder.WriteString(fmt.Sprintf("[%s]: %s\n\n", role, msg.Content))
+                }</span>
+                <span class="cov1" title="1">builder.WriteString("=== END CONVERSATION HISTORY ===\n\n")</span>
+        }
+
+        <span class="cov3" title="2">return builder.String()</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package contextgather
+
+import (
+        "bufio"
+        "fmt"
+        "os"
+        "os/exec"
+        "os/user"
+        "path/filepath"
+        "runtime"
+        "strings"
+
+        "shell-ai-go/pkg/ai"
+        "shell-ai-go/pkg/tmux"
+)
+
+// Gatherer collects context information for AI requests
+type Gatherer struct {
+        tmuxClient     *tmux.Client
+        maxHistLines   int
+        includeHistory bool
+        includePanes   bool
+}
+
+// NewGatherer creates a new context gatherer
+func NewGatherer(tmuxClient *tmux.Client) *Gatherer <span class="cov7" title="10">{
+        return &amp;Gatherer{
+                tmuxClient:     tmuxClient,
+                maxHistLines:   50,
+                includeHistory: true,
+                includePanes:   true,
+        }
+}</span>
+
+// SetOptions configures the gatherer
+func (g *Gatherer) SetOptions(maxHistLines int, includeHistory, includePanes bool) <span class="cov3" title="2">{
+        g.maxHistLines = maxHistLines
+        g.includeHistory = includeHistory
+        g.includePanes = includePanes
+}</span>
+
+// GatherContext collects all context information
+func (g *Gatherer) GatherContext() (*ai.ContextData, error) <span class="cov1" title="1">{
+        context := &amp;ai.ContextData{}
+
+        // System information
+        sysInfo, err := g.gatherSystemInfo()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to gather system info: %w", err)
+        }</span>
+        <span class="cov1" title="1">context.SystemInfo = *sysInfo
+
+        // Working directory
+        wd, err := os.Getwd()
+        if err != nil </span><span class="cov0" title="0">{
+                wd = "unknown"
+        }</span>
+        <span class="cov1" title="1">context.WorkingDir = wd
+
+        // Environment variables (filtered)
+        context.Environment = g.gatherEnvironment()
+
+        // Shell history
+        if g.includeHistory </span><span class="cov0" title="0">{
+                history, err := g.gatherShellHistory()
+                if err == nil </span><span class="cov0" title="0">{
+                        context.ShellHistory = history
+                }</span>
+        }
+
+        // Tmux pane content
+        <span class="cov1" title="1">if g.includePanes &amp;&amp; g.tmuxClient.IsInTmux() </span><span class="cov0" title="0">{
+                paneContent, err := g.tmuxClient.CapturePaneContent()
+                if err == nil </span><span class="cov0" title="0">{
+                        context.TmuxContent = paneContent
+                }</span>
+        }
+
+        <span class="cov1" title="1">return context, nil</span>
+}
+
+// gatherSystemInfo collects system information
+func (g *Gatherer) gatherSystemInfo() (*ai.SystemInfo, error) <span class="cov3" title="2">{
+        info := &amp;ai.SystemInfo{
+                OS: runtime.GOOS,
+        }
+
+        // Get hostname
+        hostname, err := os.Hostname()
+        if err == nil </span><span class="cov3" title="2">{
+                info.Hostname = hostname
+        }</span>
+
+        // Get current user
+        <span class="cov3" title="2">currentUser, err := user.Current()
+        if err == nil </span><span class="cov3" title="2">{
+                info.User = currentUser.Username
+        }</span>
+
+        // Get shell
+        <span class="cov3" title="2">shell := os.Getenv("SHELL")
+        if shell == "" </span><span class="cov0" title="0">{
+                shell = "unknown"
+        }</span> else<span class="cov3" title="2"> {
+                shell = filepath.Base(shell)
+        }</span>
+        <span class="cov3" title="2">info.Shell = shell
+
+        return info, nil</span>
+}
+
+// gatherEnvironment collects relevant environment variables
+func (g *Gatherer) gatherEnvironment() []string <span class="cov3" title="2">{
+        // Only include relevant environment variables
+        relevant := []string{
+                "PATH", "HOME", "USER", "SHELL", "TERM", "PWD",
+                "LANG", "LC_ALL", "EDITOR", "PAGER",
+        }
+
+        var env []string
+        for _, key := range relevant </span><span class="cov10" title="20">{
+                if value := os.Getenv(key); value != "" </span><span class="cov9" title="16">{
+                        env = append(env, fmt.Sprintf("%s=%s", key, value))
+                }</span>
+        }
+
+        <span class="cov3" title="2">return env</span>
+}
+
+// gatherShellHistory collects shell command history
+func (g *Gatherer) gatherShellHistory() ([]string, error) <span class="cov0" title="0">{
+        // Try atuin first (enhanced history)
+        if history, err := g.getAtuinHistory(); err == nil &amp;&amp; len(history) &gt; 0 </span><span class="cov0" title="0">{
+                return history, nil
+        }</span>
+
+        // Fall back to shell-specific history
+        <span class="cov0" title="0">shell := os.Getenv("SHELL")
+        if strings.Contains(shell, "zsh") </span><span class="cov0" title="0">{
+                return g.getZshHistory()
+        }</span> else<span class="cov0" title="0"> if strings.Contains(shell, "bash") </span><span class="cov0" title="0">{
+                return g.getBashHistory()
+        }</span>
+
+        <span class="cov0" title="0">return nil, fmt.Errorf("unsupported shell for history: %s", shell)</span>
+}
+
+// getAtuinHistory gets history from atuin if available
+func (g *Gatherer) getAtuinHistory() ([]string, error) <span class="cov1" title="1">{
+        // Check if invoked from tmux - if so, use global history instead of session-specific
+        var cmd *exec.Cmd
+        if os.Getenv("AI_SHELL_TMUX_INVOKED") != "" || g.tmuxClient.IsInTmux() </span><span class="cov0" title="0">{
+                // Use global history when invoked from tmux (drop -s flag)
+                cmd = exec.Command("atuin", "history", "list", "-f", "{command}")
+        }</span> else<span class="cov1" title="1"> {
+                // Use session-specific history for normal invocations
+                cmd = exec.Command("atuin", "history", "list", "-s", "-f", "{command}")
+        }</span>
+
+        <span class="cov1" title="1">output, err := cmd.Output()
+        if err != nil </span><span class="cov1" title="1">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">lines := strings.Split(string(output), "\n")
+
+        // Filter out empty lines and get last N lines
+        var filteredLines []string
+        for _, line := range lines </span><span class="cov0" title="0">{
+                line = strings.TrimSpace(line)
+                if line != "" </span><span class="cov0" title="0">{
+                        filteredLines = append(filteredLines, line)
+                }</span>
+        }
+
+        // Get last N lines
+        <span class="cov0" title="0">start := 0
+        if len(filteredLines) &gt; g.maxHistLines </span><span class="cov0" title="0">{
+                start = len(filteredLines) - g.maxHistLines
+        }</span>
+
+        <span class="cov0" title="0">return filteredLines[start:], nil</span>
+}
+
+// getZshHistory gets history from zsh
+func (g *Gatherer) getZshHistory() ([]string, error) <span class="cov0" title="0">{
+        // Try fc command first
+        cmd := exec.Command("fc", "-l", fmt.Sprintf("-%d", g.maxHistLines))
+        output, err := cmd.Output()
+        if err == nil </span><span class="cov0" title="0">{
+                lines := strings.Split(string(output), "\n")
+                var history []string
+                for _, line := range lines </span><span class="cov0" title="0">{
+                        // Remove line numbers from fc output
+                        if idx := strings.Index(line, " "); idx &gt; 0 &amp;&amp; idx &lt; 10 </span><span class="cov0" title="0">{
+                                cmd := strings.TrimSpace(line[idx:])
+                                if cmd != "" </span><span class="cov0" title="0">{
+                                        history = append(history, cmd)
+                                }</span>
+                        }
+                }
+                <span class="cov0" title="0">return history, nil</span>
+        }
+
+        // Fall back to history file
+        <span class="cov0" title="0">return g.readHistoryFile("~/.zsh_history")</span>
+}
+
+// getBashHistory gets history from bash
+func (g *Gatherer) getBashHistory() ([]string, error) <span class="cov0" title="0">{
+        return g.readHistoryFile("~/.bash_history")
+}</span>
+
+// readHistoryFile reads commands from a history file
+func (g *Gatherer) readHistoryFile(filename string) ([]string, error) <span class="cov3" title="2">{
+        // Expand home directory
+        home, err := os.UserHomeDir()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov3" title="2">if strings.HasPrefix(filename, "~/") </span><span class="cov1" title="1">{
+                filename = filepath.Join(home, filename[2:])
+        }</span>
+
+        <span class="cov3" title="2">file, err := os.Open(filename)
+        if err != nil </span><span class="cov1" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov1" title="1">defer file.Close()
+
+        var lines []string
+        scanner := bufio.NewScanner(file)
+        for scanner.Scan() </span><span class="cov7" title="8">{
+                line := strings.TrimSpace(scanner.Text())
+                if line != "" &amp;&amp; !strings.HasPrefix(line, "#") </span><span class="cov5" title="5">{
+                        lines = append(lines, line)
+                }</span>
+        }
+
+        // Get last N lines
+        <span class="cov1" title="1">start := 0
+        if len(lines) &gt; g.maxHistLines </span><span class="cov1" title="1">{
+                start = len(lines) - g.maxHistLines
+        }</span>
+
+        <span class="cov1" title="1">return lines[start:], scanner.Err()</span>
+}
+
+// FormatContext formats context data for AI consumption
+func (g *Gatherer) FormatContext(ctx *ai.ContextData, conversation *ai.Conversation) string <span class="cov3" title="2">{
+        var builder strings.Builder
+
+        // System context
+        builder.WriteString("=== SYSTEM CONTEXT ===\n")
+        builder.WriteString(fmt.Sprintf("OS: %s\n", ctx.SystemInfo.OS))
+        builder.WriteString(fmt.Sprintf("Hostname: %s\n", ctx.SystemInfo.Hostname))
+        builder.WriteString(fmt.Sprintf("User: %s\n", ctx.SystemInfo.User))
+        builder.WriteString(fmt.Sprintf("Shell: %s\n", ctx.SystemInfo.Shell))
+        builder.WriteString(fmt.Sprintf("Working Directory: %s\n", ctx.WorkingDir))
+        builder.WriteString("\n")
+
+        // Environment
+        if len(ctx.Environment) &gt; 0 </span><span class="cov1" title="1">{
+                builder.WriteString("=== ENVIRONMENT ===\n")
+                for _, env := range ctx.Environment </span><span class="cov3" title="2">{
+                        builder.WriteString(fmt.Sprintf("%s\n", env))
+                }</span>
+                <span class="cov1" title="1">builder.WriteString("\n")</span>
+        }
+
+        // Shell history
+        <span class="cov3" title="2">if len(ctx.ShellHistory) &gt; 0 </span><span class="cov1" title="1">{
+                builder.WriteString("=== RECENT SHELL HISTORY ===\n")
+                for _, cmd := range ctx.ShellHistory </span><span class="cov4" title="3">{
+                        builder.WriteString(fmt.Sprintf("%s\n", cmd))
+                }</span>
+                <span class="cov1" title="1">builder.WriteString("=== END OF SHELL HISTORY ===\n\n")</span>
+        }
+
+        // Tmux content
+        <span class="cov3" title="2">if len(ctx.TmuxContent) &gt; 0 </span><span class="cov1" title="1">{
+                builder.WriteString("=== TMUX WINDOW CONTENT ===\n")
+                for _, pane := range ctx.TmuxContent </span><span class="cov1" title="1">{
+                        marker := fmt.Sprintf("PANE %s", pane.PaneID)
+                        if pane.IsActive </span><span class="cov1" title="1">{
+                                marker += " (ACTIVE)"
+                        }</span>
+                        <span class="cov1" title="1">if pane.Title != "" &amp;&amp; pane.Title != "bash" &amp;&amp; pane.Title != "zsh" </span><span class="cov0" title="0">{
+                                marker += fmt.Sprintf(" - %s", pane.Title)
+                        }</span>
+
+                        <span class="cov1" title="1">builder.WriteString(fmt.Sprintf("\n--- %s ---\n", marker))
+                        if pane.Content != "" </span><span class="cov1" title="1">{
+                                builder.WriteString(pane.Content)
+                                builder.WriteString("\n")
+                        }</span> else<span class="cov0" title="0"> {
+                                builder.WriteString("(empty pane)\n")
+                        }</span>
+                }
+                <span class="cov1" title="1">builder.WriteString("\n=== END TMUX CONTENT ===\n\n")</span>
+        }
+
+        // Conversation history
+        <span class="cov3" title="2">if conversation != nil &amp;&amp; len(conversation.Messages) &gt; 0 </span><span class="cov1" title="1">{
+                builder.WriteString("=== CONVERSATION HISTORY ===\n")
+                for _, msg := range conversation.Messages </span><span class="cov3" title="2">{
+                        role := strings.ToUpper(string(msg.Role))
+                        builder.WriteString(fmt.Sprintf("[%s]: %s\n\n", role, msg.Content))
+                }</span>
+                <span class="cov1" title="1">builder.WriteString("=== END CONVERSATION HISTORY ===\n\n")</span>
+        }
+
+        <span class="cov3" title="2">return builder.String()</span>
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package response
+
+import (
+        "fmt"
+        "regexp"
+        "strings"
+
+        "shell-ai-go/pkg/ai"
+)
+
+// Parser handles parsing AI responses to extract commands
+type Parser struct {
+        dangerousCommands []string
+        dangerousPatterns []*regexp.Regexp
+}
+
+// NewParser creates a new response parser
+func NewParser() *Parser <span class="cov3" title="6">{
+        // List of potentially dangerous commands
+        dangerous := []string{
+                "rm", "rmdir", "dd", "mkfs", "fdisk", "format",
+                "shutdown", "reboot", "halt", "poweroff",
+                "chmod", "chown", "sudo", "su",
+                "iptables", "ufw", "firewall-cmd",
+                "crontab", "systemctl", "service",
+                "passwd", "usermod", "userdel",
+                "apt", "yum", "dnf", "pacman", "snap",
+                "wget", "curl", "pip", "npm", "gem",
+        }
+
+        // Compile patterns for dangerous operations
+        patterns := []*regexp.Regexp{
+                regexp.MustCompile(`\s+/\s*$`),                   // Operations on root directory
+                regexp.MustCompile(`rm\s+.*-r.*\s*\*`),           // Recursive rm with wildcards
+                regexp.MustCompile(`&gt;\s*/dev/`),                  // Writing to device files
+                regexp.MustCompile(`curl\s+.*\s*\|\s*(sh|bash)`), // Curl piped to shell
+                regexp.MustCompile(`wget\s+.*\s*\|\s*(sh|bash)`), // Wget piped to shell
+        }
+
+        return &amp;Parser{
+                dangerousCommands: dangerous,
+                dangerousPatterns: patterns,
+        }
+}</span>
+
+// ExtractCommands extracts shell commands from AI response
+func (p *Parser) ExtractCommands(content string) *ai.CommandExtraction <span class="cov3" title="6">{
+        commands := []ai.Command{}
+        lines := strings.Split(content, "\n")
+
+        inCodeBlock := false
+        codeBlockLanguage := ""
+        lineNumber := 0
+
+        for _, line := range lines </span><span class="cov5" title="46">{
+                lineNumber++
+                trimmed := strings.TrimSpace(line)
+
+                // Check for code block markers
+                if strings.HasPrefix(trimmed, "```") </span><span class="cov3" title="8">{
+                        if inCodeBlock </span><span class="cov2" title="4">{
+                                inCodeBlock = false
+                                codeBlockLanguage = ""
+                        }</span> else<span class="cov2" title="4"> {
+                                inCodeBlock = true
+                                // Extract language if specified
+                                if len(trimmed) &gt; 3 </span><span class="cov2" title="3">{
+                                        codeBlockLanguage = strings.TrimSpace(trimmed[3:])
+                                }</span>
+                        }
+                        <span class="cov3" title="8">continue</span>
+                }
+
+                // Extract commands from code blocks
+                <span class="cov5" title="38">if inCodeBlock </span><span class="cov4" title="16">{
+                        cmd := p.parseCommandLine(trimmed, lineNumber)
+                        if cmd != nil </span><span class="cov4" title="11">{
+                                // Mark as shell command if in bash/sh block or no language specified
+                                if codeBlockLanguage == "" || codeBlockLanguage == "bash" ||
+                                        codeBlockLanguage == "sh" || codeBlockLanguage == "shell" </span><span class="cov4" title="11">{
+                                        commands = append(commands, *cmd)
+                                }</span>
+                        }
+                        <span class="cov4" title="16">continue</span>
+                }
+
+                // Look for shell-like patterns outside code blocks
+                <span class="cov5" title="22">if strings.HasPrefix(trimmed, "$ ") || strings.HasPrefix(trimmed, "# ") </span><span class="cov2" title="4">{
+                        cmdText := strings.TrimSpace(trimmed[2:])
+                        cmd := p.parseCommandLine(cmdText, lineNumber)
+                        if cmd != nil </span><span class="cov2" title="4">{
+                                commands = append(commands, *cmd)
+                        }</span>
+                } else<span class="cov4" title="18"> if strings.HasPrefix(trimmed, "&gt; ") </span><span class="cov0" title="0">{
+                        // PowerShell-like prompt
+                        cmdText := strings.TrimSpace(trimmed[2:])
+                        cmd := p.parseCommandLine(cmdText, lineNumber)
+                        if cmd != nil </span><span class="cov0" title="0">{
+                                commands = append(commands, *cmd)
+                        }</span>
+                }
+        }
+
+        // Generate explanation
+        <span class="cov3" title="6">explanation := p.generateExplanation(commands)
+
+        return &amp;ai.CommandExtraction{
+                Commands:    commands,
+                Explanation: explanation,
+        }</span>
+}
+
+// parseCommandLine parses a single command line
+func (p *Parser) parseCommandLine(cmdText string, lineNumber int) *ai.Command <span class="cov5" title="26">{
+        if cmdText == "" || strings.HasPrefix(cmdText, "#") </span><span class="cov3" title="7">{
+                return nil
+        }</span>
+
+        // Skip obvious non-commands
+        <span class="cov4" title="19">if strings.Contains(cmdText, "...") || strings.Contains(cmdText, "&lt;") || strings.Contains(cmdText, "&gt;") </span><span class="cov1" title="2">{
+                // Check if it's actually a redirection
+                if !strings.Contains(cmdText, " &gt; ") &amp;&amp; !strings.Contains(cmdText, " &lt; ") &amp;&amp;
+                        !strings.Contains(cmdText, " &gt;&gt; ") &amp;&amp; !strings.Contains(cmdText, " 2&gt;") </span><span class="cov1" title="1">{
+                        return nil
+                }</span>
+        }
+
+        // Extract description if present (commands with inline comments)
+        <span class="cov4" title="18">description := ""
+        commentIndex := strings.Index(cmdText, " # ")
+        if commentIndex &gt; 0 </span><span class="cov2" title="4">{
+                description = strings.TrimSpace(cmdText[commentIndex+3:])
+                cmdText = strings.TrimSpace(cmdText[:commentIndex])
+        }</span>
+
+        // Assess safety
+        <span class="cov4" title="18">safe := p.assessCommandSafety(cmdText)
+
+        return &amp;ai.Command{
+                Command:     cmdText,
+                Description: description,
+                Safe:        safe,
+                LineNumber:  lineNumber,
+        }</span>
+}
+
+// assessCommandSafety determines if a command is safe to execute
+func (p *Parser) assessCommandSafety(command string) bool <span class="cov5" title="45">{
+        lowerCmd := strings.ToLower(command)
+
+        // Split command into words to check for exact command matches
+        words := strings.Fields(lowerCmd)
+        if len(words) == 0 </span><span class="cov0" title="0">{
+                return true
+        }</span>
+
+        // Get the first word (the actual command)
+        <span class="cov5" title="45">firstWord := words[0]
+
+        // Check for dangerous commands (exact match or starts with dangerous command)
+        for _, dangerous := range p.dangerousCommands </span><span class="cov10" title="1038">{
+                if firstWord == dangerous || strings.HasPrefix(firstWord, dangerous+".") </span><span class="cov5" title="22">{
+                        return false
+                }</span>
+        }
+
+        // Check for dangerous patterns
+        <span class="cov5" title="23">for _, pattern := range p.dangerousPatterns </span><span class="cov7" title="115">{
+                if pattern.MatchString(lowerCmd) </span><span class="cov0" title="0">{
+                        return false
+                }</span>
+        }
+
+        // Additional safety checks
+        <span class="cov5" title="23">if strings.Contains(lowerCmd, "rm ") &amp;&amp; (strings.Contains(lowerCmd, "*") || strings.Contains(lowerCmd, "/")) </span><span class="cov0" title="0">{
+                return false
+        }</span>
+
+        <span class="cov5" title="23">if strings.Contains(lowerCmd, "sudo") || strings.Contains(lowerCmd, "su ") </span><span class="cov0" title="0">{
+                return false
+        }</span>
+
+        <span class="cov5" title="23">return true</span>
+}
+
+// generateExplanation creates an explanation of the extracted commands
+func (p *Parser) generateExplanation(commands []ai.Command) string <span class="cov3" title="9">{
+        if len(commands) == 0 </span><span class="cov1" title="2">{
+                return "No executable commands found in the response."
+        }</span>
+
+        <span class="cov3" title="7">var builder strings.Builder
+        builder.WriteString(fmt.Sprintf("Found %d command(s):\n", len(commands)))
+
+        safeCount := 0
+        unsafeCount := 0
+
+        for i, cmd := range commands </span><span class="cov4" title="19">{
+                if cmd.Safe </span><span class="cov4" title="13">{
+                        safeCount++
+                }</span> else<span class="cov3" title="6"> {
+                        unsafeCount++
+                }</span>
+
+                <span class="cov4" title="19">status := "✅"
+                if !cmd.Safe </span><span class="cov3" title="6">{
+                        status = "⚠️"
+                }</span>
+
+                <span class="cov4" title="19">builder.WriteString(fmt.Sprintf("%d. %s %s", i+1, status, cmd.Command))
+                if cmd.Description != "" </span><span class="cov2" title="3">{
+                        builder.WriteString(fmt.Sprintf(" - %s", cmd.Description))
+                }</span>
+                <span class="cov4" title="19">builder.WriteString("\n")</span>
+        }
+
+        <span class="cov3" title="7">if unsafeCount &gt; 0 </span><span class="cov2" title="3">{
+                builder.WriteString(fmt.Sprintf("\n⚠️  Warning: %d command(s) marked as potentially unsafe", unsafeCount))
+        }</span>
+
+        <span class="cov3" title="7">return builder.String()</span>
+}
+
+// FormatCommands formats commands for display
+func (p *Parser) FormatCommands(commands []ai.Command) string <span class="cov1" title="1">{
+        if len(commands) == 0 </span><span class="cov0" title="0">{
+                return "No commands found."
+        }</span>
+
+        <span class="cov1" title="1">var builder strings.Builder
+
+        for i, cmd := range commands </span><span class="cov2" title="3">{
+                if i &gt; 0 </span><span class="cov1" title="2">{
+                        builder.WriteString("\n")
+                }</span>
+
+                // Add safety indicator
+                <span class="cov2" title="3">if cmd.Safe </span><span class="cov1" title="2">{
+                        builder.WriteString("✅ ")
+                }</span> else<span class="cov1" title="1"> {
+                        builder.WriteString("⚠️  ")
+                }</span>
+
+                <span class="cov2" title="3">builder.WriteString(cmd.Command)
+
+                if cmd.Description != "" </span><span class="cov1" title="2">{
+                        builder.WriteString(fmt.Sprintf("  # %s", cmd.Description))
+                }</span>
+        }
+
+        <span class="cov1" title="1">return builder.String()</span>
+}
+
+// GroupCommandsBySafety groups commands by their safety level
+func (p *Parser) GroupCommandsBySafety(commands []ai.Command) (safe, unsafe []ai.Command) <span class="cov1" title="1">{
+        for _, cmd := range commands </span><span class="cov3" title="5">{
+                if cmd.Safe </span><span class="cov2" title="3">{
+                        safe = append(safe, cmd)
+                }</span> else<span class="cov1" title="2"> {
+                        unsafe = append(unsafe, cmd)
+                }</span>
+        }
+        <span class="cov1" title="1">return safe, unsafe</span>
+}
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package session
+
+import (
+        "bufio"
+        "context"
+        "fmt"
+        "io"
+        "os"
+        "os/signal"
+        "strings"
+        "syscall"
+        "time"
+
+        "shell-ai-go/pkg/ai"
+        "shell-ai-go/pkg/config"
+        "shell-ai-go/pkg/contextgather"
+        "shell-ai-go/pkg/response"
+        "shell-ai-go/pkg/tmux"
+
+        "github.com/charmbracelet/lipgloss"
+)
+
+// InteractiveSession manages an interactive AI conversation session
+type InteractiveSession struct {
+        config          *config.Config
+        aiManager       *ai.Manager
+        tmuxClient      *tmux.Client
+        contextGatherer *contextgather.Gatherer
+        responseParser  *response.Parser
+        conversationID  string
+        styles          *sessionStyles
+}
+
+// sessionStyles contains styling for the interactive session
+type sessionStyles struct {
+        prompt    lipgloss.Style
+        user      lipgloss.Style
+        assistant lipgloss.Style
+        system    lipgloss.Style
+        error     lipgloss.Style
+        warning   lipgloss.Style
+        success   lipgloss.Style
+        command   lipgloss.Style
+}
+
+// NewInteractiveSession creates a new interactive session
+func NewInteractiveSession(cfg *config.Config, tmuxClient *tmux.Client) *InteractiveSession <span class="cov0" title="0">{
+        styles := &amp;sessionStyles{
+                prompt:    lipgloss.NewStyle().Foreground(lipgloss.Color("12")).Bold(true), // Bright blue
+                user:      lipgloss.NewStyle().Foreground(lipgloss.Color("10")),            // Bright green
+                assistant: lipgloss.NewStyle().Foreground(lipgloss.Color("14")),            // Bright cyan
+                system:    lipgloss.NewStyle().Foreground(lipgloss.Color("8")),             // Gray
+                error:     lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Bold(true),  // Bright red
+                warning:   lipgloss.NewStyle().Foreground(lipgloss.Color("11")),            // Bright yellow
+                success:   lipgloss.NewStyle().Foreground(lipgloss.Color("10")),            // Bright green
+                command:   lipgloss.NewStyle().Foreground(lipgloss.Color("13")).Bold(true), // Bright magenta
+        }
+
+        return &amp;InteractiveSession{
+                config:          cfg,
+                aiManager:       cfg.CreateAIManager(),
+                tmuxClient:      tmuxClient,
+                contextGatherer: contextgather.NewGatherer(tmuxClient),
+                responseParser:  response.NewParser(),
+                conversationID:  fmt.Sprintf("session-%d", time.Now().Unix()),
+                styles:          styles,
+        }
+}</span>
+
+// Run starts the interactive session
+func (s *InteractiveSession) Run() error <span class="cov0" title="0">{
+        // Setup signal handling for graceful shutdown
+        sigChan := make(chan os.Signal, 1)
+        signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+        // Print welcome message
+        s.printWelcome()
+
+        // Setup context gatherer options
+        s.contextGatherer.SetOptions(
+                s.config.Settings.MaxHistoryLines,
+                true,                    // include history
+                s.tmuxClient.IsInTmux(), // include panes if in tmux
+        )
+
+        // Main interaction loop
+        reader := bufio.NewReader(os.Stdin)
+
+        for </span><span class="cov0" title="0">{
+                // Display prompt
+                fmt.Print(s.styles.prompt.Render("🤖 AI&gt; "))
+
+                // Create a channel to receive input
+                inputChan := make(chan string, 1)
+                errChan := make(chan error, 1)
+
+                // Read input in a goroutine
+                go func() </span><span class="cov0" title="0">{
+                        input, err := reader.ReadString('\n')
+                        if err != nil </span><span class="cov0" title="0">{
+                                errChan &lt;- err
+                                return
+                        }</span>
+                        <span class="cov0" title="0">inputChan &lt;- strings.TrimSpace(input)</span>
+                }()
+
+                // Wait for input or signal
+                <span class="cov0" title="0">select </span>{
+                case &lt;-sigChan:<span class="cov0" title="0">
+                        fmt.Println("\n" + s.styles.system.Render("Session interrupted. Goodbye!"))
+                        return nil</span>
+                case err := &lt;-errChan:<span class="cov0" title="0">
+                        if err == io.EOF </span><span class="cov0" title="0">{
+                                fmt.Println("\n" + s.styles.system.Render("Session ended (Ctrl-D). Goodbye!"))
+                                return nil
+                        }</span>
+                        <span class="cov0" title="0">return fmt.Errorf("input error: %w", err)</span>
+                case input := &lt;-inputChan:<span class="cov0" title="0">
+                        if input == "" </span><span class="cov0" title="0">{
+                                continue</span>
+                        }
+
+                        // Handle special commands
+                        <span class="cov0" title="0">if s.handleSpecialCommands(input) </span><span class="cov0" title="0">{
+                                continue</span>
+                        }
+
+                        // Process AI query
+                        <span class="cov0" title="0">if err := s.processQuery(input); err != nil </span><span class="cov0" title="0">{
+                                fmt.Println(s.styles.error.Render(fmt.Sprintf("Error: %v", err)))
+                        }</span>
+                }
+        }
+}
+
+// printWelcome displays the welcome message
+func (s *InteractiveSession) printWelcome() <span class="cov0" title="0">{
+        fmt.Println(s.styles.success.Render("🚀 Shell AI Interactive Session"))
+        fmt.Println(s.styles.system.Render("===================================="))
+        fmt.Println()
+
+        // Show active provider
+        if provider, err := s.aiManager.GetActiveProvider(); err == nil </span><span class="cov0" title="0">{
+                fmt.Println(s.styles.system.Render(fmt.Sprintf("Active AI Provider: %s", provider.Name())))
+        }</span> else<span class="cov0" title="0"> {
+                fmt.Println(s.styles.warning.Render("Warning: No active AI provider configured"))
+        }</span>
+
+        // Show tmux status
+        <span class="cov0" title="0">if s.tmuxClient.IsInTmux() </span><span class="cov0" title="0">{
+                fmt.Println(s.styles.system.Render("Tmux integration: Enabled"))
+        }</span> else<span class="cov0" title="0"> {
+                fmt.Println(s.styles.warning.Render("Tmux integration: Disabled (not in tmux)"))
+        }</span>
+
+        <span class="cov0" title="0">fmt.Println()
+        fmt.Println(s.styles.system.Render("Commands:"))
+        fmt.Println(s.styles.system.Render("  Type your questions naturally"))
+        fmt.Println(s.styles.system.Render("  /help    - Show help"))
+        fmt.Println(s.styles.system.Render("  /context - Show current context"))
+        fmt.Println(s.styles.system.Render("  /clear   - Clear conversation"))
+        fmt.Println(s.styles.system.Render("  /send    - Send last response to tmux pane"))
+        fmt.Println(s.styles.system.Render("  /quit    - Exit session"))
+        fmt.Println(s.styles.system.Render("  Ctrl-D   - Exit session"))
+        fmt.Println()</span>
+}
+
+// handleSpecialCommands processes special session commands
+func (s *InteractiveSession) handleSpecialCommands(input string) bool <span class="cov0" title="0">{
+        switch strings.ToLower(input) </span>{
+        case "/help", "/h":<span class="cov0" title="0">
+                s.showHelp()
+                return true</span>
+        case "/context", "/ctx":<span class="cov0" title="0">
+                s.showContext()
+                return true</span>
+        case "/clear", "/c":<span class="cov0" title="0">
+                s.clearConversation()
+                return true</span>
+        case "/send", "/s":<span class="cov0" title="0">
+                s.sendToPane()
+                return true</span>
+        case "/quit", "/q", "/exit":<span class="cov0" title="0">
+                fmt.Println(s.styles.system.Render("Goodbye!"))
+                os.Exit(0)
+                return true</span>
+        default:<span class="cov0" title="0">
+                if strings.HasPrefix(input, "/provider ") </span><span class="cov0" title="0">{
+                        s.switchProvider(strings.TrimSpace(input[10:]))
+                        return true
+                }</span>
+                <span class="cov0" title="0">return false</span>
+        }
+}
+
+// processQuery processes an AI query
+func (s *InteractiveSession) processQuery(query string) error <span class="cov0" title="0">{
+        // Gather context
+        fmt.Print(s.styles.system.Render("Gathering context... "))
+        ctx, err := s.contextGatherer.GatherContext()
+        if err != nil </span><span class="cov0" title="0">{
+                fmt.Println(s.styles.error.Render("failed"))
+                return fmt.Errorf("failed to gather context: %w", err)
+        }</span>
+        <span class="cov0" title="0">fmt.Println(s.styles.success.Render("done"))
+
+        // Get conversation
+        conversation := s.aiManager.GetOrCreateConversation(s.conversationID)
+
+        // Format context
+        contextStr := s.contextGatherer.FormatContext(ctx, conversation)
+
+        // Create full prompt
+        fullPrompt := contextStr + "\n=== USER PROMPT ===\n" + query +
+                "\n\nPlease provide a helpful response. If you're suggesting shell commands, format them clearly so they can be easily copied and executed."
+
+        // Show thinking indicator
+        fmt.Print(s.styles.system.Render("Thinking... "))
+
+        // Send to AI
+        response, err := s.aiManager.Chat(context.Background(), s.conversationID, fullPrompt)
+        if err != nil </span><span class="cov0" title="0">{
+                fmt.Println(s.styles.error.Render("failed"))
+                return err
+        }</span>
+        <span class="cov0" title="0">fmt.Println(s.styles.success.Render("done"))
+
+        // Display response
+        fmt.Println()
+        fmt.Println(s.styles.assistant.Render("🤖 Assistant:"))
+        fmt.Println(response.Content)
+        fmt.Println()
+
+        // Extract and display commands if any
+        extraction := s.responseParser.ExtractCommands(response.Content)
+        if len(extraction.Commands) &gt; 0 </span><span class="cov0" title="0">{
+                fmt.Println(s.styles.command.Render("📋 Extracted Commands:"))
+                fmt.Println(s.responseParser.FormatCommands(extraction.Commands))
+                fmt.Println()
+
+                if s.tmuxClient.IsInTmux() </span><span class="cov0" title="0">{
+                        fmt.Println(s.styles.system.Render("Use '/send' to send commands to a tmux pane"))
+                }</span>
+                <span class="cov0" title="0">fmt.Println()</span>
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+// showHelp displays help information
+func (s *InteractiveSession) showHelp() <span class="cov0" title="0">{
+        fmt.Println(s.styles.system.Render("Shell AI Help"))
+        fmt.Println(s.styles.system.Render("=============="))
+        fmt.Println()
+        fmt.Println(s.styles.system.Render("Available Commands:"))
+        fmt.Println(s.styles.system.Render("  /help              - Show this help"))
+        fmt.Println(s.styles.system.Render("  /context           - Show current context"))
+        fmt.Println(s.styles.system.Render("  /clear             - Clear conversation history"))
+        fmt.Println(s.styles.system.Render("  /send              - Send last commands to tmux pane"))
+        fmt.Println(s.styles.system.Render("  /provider &lt;name&gt;   - Switch AI provider"))
+        fmt.Println(s.styles.system.Render("  /quit              - Exit session"))
+        fmt.Println()
+        fmt.Println(s.styles.system.Render("Tips:"))
+        fmt.Println(s.styles.system.Render("  - Ask natural questions about shell commands"))
+        fmt.Println(s.styles.system.Render("  - Context includes your shell history and tmux content"))
+        fmt.Println(s.styles.system.Render("  - Commands are automatically extracted and safety-checked"))
+        fmt.Println(s.styles.system.Render("  - Use Ctrl-D to exit gracefully"))
+        fmt.Println()
+}</span>
+
+// showContext displays the current context
+func (s *InteractiveSession) showContext() <span class="cov0" title="0">{
+        fmt.Println(s.styles.system.Render("Current Context"))
+        fmt.Println(s.styles.system.Render("==============="))
+        fmt.Println()
+
+        ctx, err := s.contextGatherer.GatherContext()
+        if err != nil </span><span class="cov0" title="0">{
+                fmt.Println(s.styles.error.Render(fmt.Sprintf("Error gathering context: %v", err)))
+                return
+        }</span>
+
+        <span class="cov0" title="0">conversation := s.aiManager.GetOrCreateConversation(s.conversationID)
+        contextStr := s.contextGatherer.FormatContext(ctx, conversation)
+
+        fmt.Println(contextStr)</span>
+}
+
+// clearConversation clears the current conversation
+func (s *InteractiveSession) clearConversation() <span class="cov0" title="0">{
+        // Create new conversation ID
+        s.conversationID = fmt.Sprintf("session-%d", time.Now().Unix())
+        fmt.Println(s.styles.success.Render("Conversation cleared. Starting fresh context."))
+}</span>
+
+// sendToPane sends the last response commands to a tmux pane
+func (s *InteractiveSession) sendToPane() <span class="cov0" title="0">{
+        if !s.tmuxClient.IsInTmux() </span><span class="cov0" title="0">{
+                fmt.Println(s.styles.warning.Render("Not running in tmux. Cannot send to pane."))
+                return
+        }</span>
+
+        // Get the last conversation
+        <span class="cov0" title="0">conversation := s.aiManager.GetOrCreateConversation(s.conversationID)
+        if len(conversation.Messages) == 0 </span><span class="cov0" title="0">{
+                fmt.Println(s.styles.warning.Render("No conversation to send."))
+                return
+        }</span>
+
+        // Find the last assistant message
+        <span class="cov0" title="0">var lastResponse string
+        for i := len(conversation.Messages) - 1; i &gt;= 0; i-- </span><span class="cov0" title="0">{
+                if conversation.Messages[i].Role == ai.RoleAssistant </span><span class="cov0" title="0">{
+                        lastResponse = conversation.Messages[i].Content
+                        break</span>
+                }
+        }
+
+        <span class="cov0" title="0">if lastResponse == "" </span><span class="cov0" title="0">{
+                fmt.Println(s.styles.warning.Render("No assistant response to send."))
+                return
+        }</span>
+
+        // Extract commands
+        <span class="cov0" title="0">extraction := s.responseParser.ExtractCommands(lastResponse)
+        if len(extraction.Commands) == 0 </span><span class="cov0" title="0">{
+                fmt.Println(s.styles.warning.Render("No commands found in last response."))
+                return
+        }</span>
+
+        // Select pane
+        <span class="cov0" title="0">fmt.Println(s.styles.system.Render("Select target tmux pane..."))
+        pane, err := s.tmuxClient.SelectPane()
+        if err != nil || pane == nil </span><span class="cov0" title="0">{
+                fmt.Println(s.styles.error.Render("Pane selection cancelled or failed."))
+                return
+        }</span>
+
+        // Send commands
+        <span class="cov0" title="0">fmt.Println(s.styles.system.Render(fmt.Sprintf("Sending commands to pane: %s", pane.FullID)))
+        err = s.tmuxClient.SendCommandsToPane(pane.FullID, extraction.Commands)
+        if err != nil </span><span class="cov0" title="0">{
+                fmt.Println(s.styles.error.Render(fmt.Sprintf("Error sending commands: %v", err)))
+        }</span> else<span class="cov0" title="0"> {
+                fmt.Println(s.styles.success.Render("Commands sent successfully!"))
+        }</span>
+}
+
+// switchProvider switches the active AI provider
+func (s *InteractiveSession) switchProvider(providerName string) <span class="cov0" title="0">{
+        if providerName == "" </span><span class="cov0" title="0">{
+                providers := s.aiManager.ListProviders()
+                fmt.Println(s.styles.system.Render("Available providers:"))
+                for _, p := range providers </span><span class="cov0" title="0">{
+                        if provider, exists := s.aiManager.GetProvider(p); exists </span><span class="cov0" title="0">{
+                                status := "❌"
+                                if provider.IsEnabled() &amp;&amp; provider.IsConfigured() </span><span class="cov0" title="0">{
+                                        status = "✅"
+                                }</span>
+                                <span class="cov0" title="0">fmt.Printf("  %s %s\n", status, p)</span>
+                        }
+                }
+                <span class="cov0" title="0">return</span>
+        }
+
+        <span class="cov0" title="0">err := s.aiManager.SetActiveProvider(providerName)
+        if err != nil </span><span class="cov0" title="0">{
+                fmt.Println(s.styles.error.Render(fmt.Sprintf("Error switching provider: %v", err)))
+        }</span> else<span class="cov0" title="0"> {
+                fmt.Println(s.styles.success.Render(fmt.Sprintf("Switched to provider: %s", providerName)))
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package session
+
+import (
+        "context"
+        "fmt"
+        "os"
+
+        "shell-ai-go/pkg/ai"
+        "shell-ai-go/pkg/config"
+        "shell-ai-go/pkg/contextgather"
+        "shell-ai-go/pkg/response"
+        "shell-ai-go/pkg/tmux"
+
+        "github.com/charmbracelet/lipgloss"
+)
+
+// OneShot handles single AI queries without conversation context
+type OneShot struct {
+        config          *config.Config
+        aiManager       *ai.Manager
+        tmuxClient      *tmux.Client
+        contextGatherer *contextgather.Gatherer
+        responseParser  *response.Parser
+        styles          *sessionStyles
+}
+
+// NewOneShot creates a new one-shot session
+func NewOneShot(cfg *config.Config, tmuxClient *tmux.Client) *OneShot <span class="cov0" title="0">{
+        styles := &amp;sessionStyles{
+                prompt:    lipgloss.NewStyle().Foreground(lipgloss.Color("12")).Bold(true),
+                user:      lipgloss.NewStyle().Foreground(lipgloss.Color("10")),
+                assistant: lipgloss.NewStyle().Foreground(lipgloss.Color("14")),
+                system:    lipgloss.NewStyle().Foreground(lipgloss.Color("8")),
+                error:     lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Bold(true),
+                warning:   lipgloss.NewStyle().Foreground(lipgloss.Color("11")),
+                success:   lipgloss.NewStyle().Foreground(lipgloss.Color("10")),
+                command:   lipgloss.NewStyle().Foreground(lipgloss.Color("13")).Bold(true),
+        }
+
+        return &amp;OneShot{
+                config:          cfg,
+                aiManager:       cfg.CreateAIManager(),
+                tmuxClient:      tmuxClient,
+                contextGatherer: contextgather.NewGatherer(tmuxClient),
+                responseParser:  response.NewParser(),
+                styles:          styles,
+        }
+}</span>
+
+// Ask processes a single query and returns the response
+func (o *OneShot) Ask(prompt string) error <span class="cov0" title="0">{
+        // Setup context gatherer options
+        o.contextGatherer.SetOptions(
+                o.config.Settings.MaxHistoryLines,
+                true,                    // include history
+                o.tmuxClient.IsInTmux(), // include panes if in tmux
+        )
+
+        // Show AI provider
+        fmt.Print(o.styles.system.Render("🤖 Asking "))
+        if provider, err := o.aiManager.GetActiveProvider(); err == nil </span><span class="cov0" title="0">{
+                fmt.Print(o.styles.system.Render(provider.Name()))
+        }</span>
+        <span class="cov0" title="0">fmt.Print(o.styles.system.Render("... "))
+
+        // Gather context
+        ctx, err := o.contextGatherer.GatherContext()
+        if err != nil </span><span class="cov0" title="0">{
+                fmt.Println(o.styles.error.Render("failed to gather context"))
+                return fmt.Errorf("failed to gather context: %w", err)
+        }</span>
+
+        // Format context (no conversation history for one-shot)
+        <span class="cov0" title="0">contextStr := o.contextGatherer.FormatContext(ctx, nil)
+
+        // Create full prompt
+        fullPrompt := contextStr + "\n=== USER PROMPT ===\n" + prompt +
+                "\n\nPlease provide a helpful response. If you're suggesting shell commands, format them clearly so they can be easily copied and executed."
+
+        // Send to AI
+        response, err := o.aiManager.Chat(context.Background(), "oneshot", fullPrompt)
+        if err != nil </span><span class="cov0" title="0">{
+                fmt.Println(o.styles.error.Render("failed"))
+                return err
+        }</span>
+        <span class="cov0" title="0">fmt.Println(o.styles.success.Render("done"))
+
+        // Display response
+        fmt.Println()
+        fmt.Println(o.styles.success.Render("Response:"))
+        fmt.Println(response.Content)
+
+        // Extract and handle commands
+        extraction := o.responseParser.ExtractCommands(response.Content)
+        if len(extraction.Commands) &gt; 0 </span><span class="cov0" title="0">{
+                fmt.Println()
+                fmt.Println(o.styles.command.Render("📋 Extracted Commands:"))
+                fmt.Println(o.responseParser.FormatCommands(extraction.Commands))
+
+                // Save response for potential tmux integration
+                if err := o.saveLastResponse(response.Content); err != nil </span><span class="cov0" title="0">{
+                        fmt.Printf("Warning: Failed to save response: %v\n", err)
+                }</span>
+
+                // Handle auto-copy settings
+                <span class="cov0" title="0">if o.config.Settings.AutoCopy &amp;&amp; o.tmuxClient.IsInTmux() </span><span class="cov0" title="0">{
+                        if o.config.Settings.AutoCopyPrompt </span><span class="cov0" title="0">{
+                                fmt.Print(o.styles.system.Render("\nSend commands to tmux pane? [y/N]: "))
+                                var answer string
+                                fmt.Scanln(&amp;answer)
+                                if answer == "y" || answer == "Y" </span><span class="cov0" title="0">{
+                                        return o.sendToPane(extraction.Commands)
+                                }</span>
+                        } else<span class="cov0" title="0"> {
+                                fmt.Println(o.styles.system.Render("\nAuto-sending commands to tmux pane..."))
+                                return o.sendToPane(extraction.Commands)
+                        }</span>
+                } else<span class="cov0" title="0"> if o.tmuxClient.IsInTmux() </span><span class="cov0" title="0">{
+                        fmt.Println()
+                        fmt.Println(o.styles.system.Render("Tip: Response saved. Use 'shell-ai-copy' to send commands to tmux panes"))
+                }</span>
+        }
+
+        <span class="cov0" title="0">fmt.Println()
+        return nil</span>
+}
+
+// sendToPane sends commands to a selected tmux pane
+func (o *OneShot) sendToPane(commands []ai.Command) error <span class="cov0" title="0">{
+        if !o.tmuxClient.IsInTmux() </span><span class="cov0" title="0">{
+                return fmt.Errorf("not running in tmux")
+        }</span>
+
+        // Select pane
+        <span class="cov0" title="0">fmt.Println(o.styles.system.Render("Select target tmux pane..."))
+        pane, err := o.tmuxClient.SelectPane()
+        if err != nil || pane == nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("pane selection cancelled or failed")
+        }</span>
+
+        // Send commands
+        <span class="cov0" title="0">fmt.Printf(o.styles.system.Render("Sending commands to pane: %s\n"), pane.FullID)
+        err = o.tmuxClient.SendCommandsToPane(pane.FullID, commands)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("error sending commands: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">fmt.Println(o.styles.success.Render("Commands sent successfully!"))
+        return nil</span>
+}
+
+// saveLastResponse saves the response for potential use by other tools
+func (o *OneShot) saveLastResponse(content string) error <span class="cov0" title="0">{
+        configDir := config.GetConfigDir()
+        if configDir == "" </span><span class="cov0" title="0">{
+                return fmt.Errorf("config directory not available")
+        }</span>
+
+        <span class="cov0" title="0">responseFile := configDir + "/last_response.txt"
+        return os.WriteFile(responseFile, []byte(content), 0644)</span>
+}
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">package tmux
+
+import (
+        "fmt"
+        "os"
+        "os/exec"
+        "strconv"
+        "strings"
+
+        "shell-ai-go/pkg/ai"
+
+        "github.com/gdamore/tcell/v2"
+)
+
+// Client handles tmux operations
+type Client struct {
+        inTmux      bool
+        currentPane string
+}
+
+// TmuxPane represents a tmux pane (copied from tmux-selector-go)
+type TmuxPane struct {
+        SessionName string `json:"session_name"`
+        WindowIndex string `json:"window_index"`
+        PaneIndex   string `json:"pane_index"`
+        PaneTitle   string `json:"pane_title"`
+        LastUsed    uint64 `json:"last_used"`
+        IsActive    bool   `json:"is_active"`
+        FullID      string `json:"full_id"`
+}
+
+func (p *TmuxPane) DisplayName() string <span class="cov1" title="1">{
+        return fmt.Sprintf("%s - %s", p.FullID, p.PaneTitle)
+}</span>
+
+// NewClient creates a new tmux client
+func NewClient() *Client <span class="cov9" title="10">{
+        return &amp;Client{
+                inTmux: os.Getenv("TMUX") != "",
+        }
+}</span>
+
+// IsInTmux returns true if running inside tmux
+func (c *Client) IsInTmux() bool <span class="cov3" title="2">{
+        return c.inTmux
+}</span>
+
+// GetCurrentPaneID returns the current pane ID
+func (c *Client) GetCurrentPaneID() (string, error) <span class="cov1" title="1">{
+        if !c.inTmux </span><span class="cov1" title="1">{
+                return "", fmt.Errorf("not running in tmux")
+        }</span>
+
+        <span class="cov0" title="0">cmd := exec.Command("tmux", "display-message", "-p", "#{session_name}:#{window_index}.#{pane_index}")
+        output, err := cmd.Output()
+        if err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span>
+        <span class="cov0" title="0">return strings.TrimSpace(string(output)), nil</span>
+}
+
+// GetPanes returns all tmux panes
+func (c *Client) GetPanes() ([]TmuxPane, error) <span class="cov1" title="1">{
+        if !c.inTmux </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("not running in tmux")
+        }</span>
+
+        <span class="cov0" title="0">cmd := exec.Command("tmux", "list-panes", "-a", "-F",
+                "#{session_name}|#{window_index}|#{pane_index}|#{pane_title}|#{t:last-used}|#{pane_active}")
+        output, err := cmd.Output()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+        panes := make([]TmuxPane, 0, len(lines))
+
+        for _, line := range lines </span><span class="cov0" title="0">{
+                if line == "" </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+
+                <span class="cov0" title="0">parts := strings.Split(line, "|")
+                if len(parts) &lt; 6 </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+
+                <span class="cov0" title="0">lastUsed, _ := strconv.ParseUint(parts[4], 10, 64)
+                isActive := parts[5] == "1"
+                fullID := fmt.Sprintf("%s:%s.%s", parts[0], parts[1], parts[2])
+
+                pane := TmuxPane{
+                        SessionName: parts[0],
+                        WindowIndex: parts[1],
+                        PaneIndex:   parts[2],
+                        PaneTitle:   parts[3],
+                        LastUsed:    lastUsed,
+                        IsActive:    isActive,
+                        FullID:      fullID,
+                }
+
+                panes = append(panes, pane)</span>
+        }
+
+        <span class="cov0" title="0">return panes, nil</span>
+}
+
+// SelectPane interactively selects a tmux pane
+func (c *Client) SelectPane() (*TmuxPane, error) <span class="cov1" title="1">{
+        if !c.inTmux </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("not running in tmux")
+        }</span>
+
+        <span class="cov0" title="0">panes, err := c.GetPanes()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to get tmux panes: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if len(panes) == 0 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("no tmux panes found")
+        }</span>
+
+        <span class="cov0" title="0">return c.interactivePaneSelector(panes)</span>
+}
+
+// SendToPane sends text to a specific tmux pane
+func (c *Client) SendToPane(paneID, text string) error <span class="cov1" title="1">{
+        if !c.inTmux </span><span class="cov1" title="1">{
+                return fmt.Errorf("not running in tmux")
+        }</span>
+
+        <span class="cov0" title="0">cmd := exec.Command("tmux", "send-keys", "-t", paneID, text, "C-m")
+        return cmd.Run()</span>
+}
+
+// SendCommandsToPane sends multiple commands to a pane with confirmation
+func (c *Client) SendCommandsToPane(paneID string, commands []ai.Command) error <span class="cov1" title="1">{
+        if !c.inTmux </span><span class="cov1" title="1">{
+                return fmt.Errorf("not running in tmux")
+        }</span>
+
+        <span class="cov0" title="0">for _, cmd := range commands </span><span class="cov0" title="0">{
+                fmt.Printf("Send command: %s\n", cmd.Command)
+                if cmd.Description != "" </span><span class="cov0" title="0">{
+                        fmt.Printf("Description: %s\n", cmd.Description)
+                }</span>
+                <span class="cov0" title="0">if !cmd.Safe </span><span class="cov0" title="0">{
+                        fmt.Print("⚠️  This command may be destructive. ")
+                }</span>
+
+                <span class="cov0" title="0">fmt.Print("Send this command? [Y/n/s(kip)]: ")
+                var response string
+                fmt.Scanln(&amp;response)
+
+                switch strings.ToLower(response) </span>{
+                case "n", "no":<span class="cov0" title="0">
+                        fmt.Println("Cancelled.")
+                        return nil</span>
+                case "s", "skip":<span class="cov0" title="0">
+                        fmt.Println("Skipped.")
+                        continue</span>
+                default:<span class="cov0" title="0">
+                        err := c.SendToPane(paneID, cmd.Command)
+                        if err != nil </span><span class="cov0" title="0">{
+                                return fmt.Errorf("failed to send command to pane: %w", err)
+                        }</span>
+                        <span class="cov0" title="0">fmt.Println("Command sent.")</span>
+                }
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+// CapturePaneContent captures content from all panes
+func (c *Client) CapturePaneContent() ([]ai.PaneContent, error) <span class="cov1" title="1">{
+        if !c.inTmux </span><span class="cov1" title="1">{
+                return nil, fmt.Errorf("not running in tmux")
+        }</span>
+
+        <span class="cov0" title="0">panes, err := c.GetPanes()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">var content []ai.PaneContent
+
+        for _, pane := range panes </span><span class="cov0" title="0">{
+                cmd := exec.Command("tmux", "capture-pane", "-t", pane.FullID, "-p")
+                output, err := cmd.Output()
+                if err != nil </span><span class="cov0" title="0">{
+                        // Skip panes we can't capture
+                        continue</span>
+                }
+
+                <span class="cov0" title="0">content = append(content, ai.PaneContent{
+                        PaneID:   pane.FullID,
+                        Title:    pane.PaneTitle,
+                        Content:  string(output),
+                        IsActive: pane.IsActive,
+                        LastUsed: int64(pane.LastUsed),
+                })</span>
+        }
+
+        <span class="cov0" title="0">return content, nil</span>
+}
+
+// findMostRecentPane finds the most recently used pane excluding current
+func (c *Client) findMostRecentPane(panes []TmuxPane, currentPaneID string) *TmuxPane <span class="cov4" title="3">{
+        var bestPane *TmuxPane
+        var bestTime uint64
+
+        for i := range panes </span><span class="cov9" title="12">{
+                pane := &amp;panes[i]
+                // Skip current pane
+                if pane.FullID == currentPaneID </span><span class="cov4" title="3">{
+                        continue</span>
+                }
+
+                // Prioritize most recently used panes (highest LastUsed timestamp)
+                <span class="cov8" title="9">if pane.LastUsed &gt; bestTime </span><span class="cov6" title="5">{
+                        bestTime = pane.LastUsed
+                        bestPane = pane
+                }</span>
+        }
+
+        <span class="cov4" title="3">return bestPane</span>
+}
+
+// interactivePaneSelector provides interactive pane selection
+func (c *Client) interactivePaneSelector(panes []TmuxPane) (*TmuxPane, error) <span class="cov0" title="0">{
+        // Initialize screen
+        screen, err := tcell.NewScreen()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">if err := screen.Init(); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">defer screen.Fini()
+
+        // Find initial selection (most recently used)
+        currentPaneID, _ := c.GetCurrentPaneID()
+        selectedIndex := 0
+        if idx := c.findMostRecentPaneIndex(panes, currentPaneID); idx &gt;= 0 </span><span class="cov0" title="0">{
+                selectedIndex = idx
+        }</span>
+
+        // Main event loop
+        <span class="cov0" title="0">for </span><span class="cov0" title="0">{
+                c.displayPanes(screen, panes, selectedIndex)
+                screen.Show()
+
+                // Handle events
+                ev := screen.PollEvent()
+                switch ev := ev.(type) </span>{
+                case *tcell.EventKey:<span class="cov0" title="0">
+                        switch ev.Key() </span>{
+                        case tcell.KeyUp, tcell.KeyCtrlK:<span class="cov0" title="0">
+                                selectedIndex = (selectedIndex - 1 + len(panes)) % len(panes)</span>
+                        case tcell.KeyDown, tcell.KeyCtrlJ:<span class="cov0" title="0">
+                                selectedIndex = (selectedIndex + 1) % len(panes)</span>
+                        case tcell.KeyLeft, tcell.KeyCtrlH:<span class="cov0" title="0">
+                                selectedIndex = (selectedIndex - 1 + len(panes)) % len(panes)</span>
+                        case tcell.KeyRight, tcell.KeyCtrlL:<span class="cov0" title="0">
+                                selectedIndex = (selectedIndex + 1) % len(panes)</span>
+                        case tcell.KeyEnter:<span class="cov0" title="0">
+                                return &amp;panes[selectedIndex], nil</span>
+                        case tcell.KeyEscape, tcell.KeyCtrlC:<span class="cov0" title="0">
+                                return nil, nil</span>
+                        case tcell.KeyRune:<span class="cov0" title="0">
+                                switch ev.Rune() </span>{
+                                case 'w', 'W', 'k', 'K':<span class="cov0" title="0">
+                                        selectedIndex = (selectedIndex - 1 + len(panes)) % len(panes)</span>
+                                case 's', 'S', 'j', 'J':<span class="cov0" title="0">
+                                        selectedIndex = (selectedIndex + 1) % len(panes)</span>
+                                case 'a', 'A', 'h', 'H':<span class="cov0" title="0">
+                                        selectedIndex = (selectedIndex - 1 + len(panes)) % len(panes)</span>
+                                case 'd', 'D', 'l', 'L':<span class="cov0" title="0">
+                                        selectedIndex = (selectedIndex + 1) % len(panes)</span>
+                                case 'q', 'Q':<span class="cov0" title="0">
+                                        return nil, nil</span>
+                                }
+                        }
+                case *tcell.EventResize:<span class="cov0" title="0">
+                        screen.Sync()</span>
+                }
+        }
+}
+
+func (c *Client) findMostRecentPaneIndex(panes []TmuxPane, currentPaneID string) int <span class="cov5" title="4">{
+        bestIndex := -1
+        var bestTime uint64
+
+        for i, pane := range panes </span><span class="cov10" title="13">{
+                // Skip current pane
+                if pane.FullID == currentPaneID </span><span class="cov5" title="4">{
+                        continue</span>
+                }
+
+                // Prioritize most recently used panes (highest LastUsed timestamp)
+                <span class="cov8" title="9">if pane.LastUsed &gt; bestTime </span><span class="cov6" title="5">{
+                        bestTime = pane.LastUsed
+                        bestIndex = i
+                }</span>
+        }
+
+        <span class="cov5" title="4">return bestIndex</span>
+}
+
+func (c *Client) displayPanes(screen tcell.Screen, panes []TmuxPane, selectedIndex int) <span class="cov0" title="0">{
+        screen.Clear()
+
+        // Header
+        style := tcell.StyleDefault.Foreground(tcell.ColorYellow)
+        c.drawText(screen, 0, 0, "Select target tmux pane:", style)
+
+        style = tcell.StyleDefault.Foreground(tcell.ColorGray)
+        c.drawText(screen, 0, 1, "Use ↑↓/WS/KJ to navigate, Enter to select, q to cancel", style)
+
+        // Pane list
+        for i, pane := range panes </span><span class="cov0" title="0">{
+                y := i + 3
+                if i == selectedIndex </span><span class="cov0" title="0">{
+                        // Highlighted selection
+                        style = tcell.StyleDefault.Background(tcell.ColorWhite).Foreground(tcell.ColorBlack).Bold(true)
+                        text := fmt.Sprintf("  &gt; %s", pane.DisplayName())
+                        c.drawText(screen, 0, y, text, style)
+                }</span> else<span class="cov0" title="0"> {
+                        // Normal item
+                        style = tcell.StyleDefault
+                        text := fmt.Sprintf("    %s", pane.DisplayName())
+                        c.drawText(screen, 0, y, text, style)
+                }</span>
+        }
+}
+
+func (c *Client) drawText(screen tcell.Screen, x, y int, text string, style tcell.Style) <span class="cov0" title="0">{
+        for i, r := range text </span><span class="cov0" title="0">{
+                screen.SetContent(x+i, y, r, nil, style)
+        }</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
