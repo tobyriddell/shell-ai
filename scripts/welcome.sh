@@ -1,5 +1,7 @@
 #!/bin/bash
 echo "Welcome to your AI-Enhanced Shell Environment!"
+echo "⚠️  NOTE: This is the legacy bash implementation."
+echo "🚀  For the best experience, use: shell-ai interactive"
 echo "- Ubuntu 24.04 LTS"
 echo "- tmux available (type: tmux)"
 echo "- atuin shell history enabled"

@@ -1,5 +1,8 @@
 # Shell AI Integration - Detailed Usage Guide
 
+> **⚠️ IMPORTANT**: This guide covers the **legacy bash implementation**.  
+> **🚀 RECOMMENDED**: Use the [Go implementation](../shell-ai-go/README.md) for the best experience.
+
 This guide provides comprehensive documentation for using the Shell AI Integration system.
 
 ## Table of Contents
@@ -14,7 +17,7 @@ This guide provides comprehensive documentation for using the Shell AI Integrati
 
 ## Installation
 
-### Native Installation (Recommended)
+### Native Installation (Legacy - Deprecated)
 
 ```bash
 git clone <repository-url>

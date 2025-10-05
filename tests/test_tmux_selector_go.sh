@@ -8,10 +8,14 @@ test_go_binary_exists() {
     local go_binary=""
     
     # Check multiple locations for Go binary
-    if [[ -x "$CONFIG_DIR/../tmux-selector-go/tmux-selector" ]]; then
+    if [[ -n "$CONFIG_DIR" && -x "$CONFIG_DIR/../tmux-selector-go/tmux-selector" ]]; then
         go_binary="$CONFIG_DIR/../tmux-selector-go/tmux-selector"
-    elif [[ -x "$CONFIG_DIR/tmux-selector-go" ]]; then
+    elif [[ -n "$CONFIG_DIR" && -x "$CONFIG_DIR/tmux-selector-go" ]]; then
         go_binary="$CONFIG_DIR/tmux-selector-go"
+    elif [[ -x "/home/shelluser/.config/shell-ai/tmux-selector-go" ]]; then
+        go_binary="/home/shelluser/.config/shell-ai/tmux-selector-go"
+    elif [[ -x "$HOME/.config/shell-ai/tmux-selector-go" ]]; then
+        go_binary="$HOME/.config/shell-ai/tmux-selector-go"
     fi
     
     if [[ -n "$go_binary" ]]; then
@@ -39,6 +43,8 @@ test_go_binary_help() {
         go_binary="$CONFIG_DIR/../tmux-selector-go/tmux-selector"
     elif [[ -x "$CONFIG_DIR/tmux-selector-go" ]]; then
         go_binary="$CONFIG_DIR/tmux-selector-go"
+    elif [[ -x "/home/shelluser/.config/shell-ai/tmux-selector-go" ]]; then
+        go_binary="/home/shelluser/.config/shell-ai/tmux-selector-go"
     fi
     
     if [[ -z "$go_binary" ]]; then
@@ -66,6 +72,8 @@ test_go_binary_outside_tmux() {
         go_binary="$CONFIG_DIR/../tmux-selector-go/tmux-selector"
     elif [[ -x "$CONFIG_DIR/tmux-selector-go" ]]; then
         go_binary="$CONFIG_DIR/tmux-selector-go"
+    elif [[ -x "/home/shelluser/.config/shell-ai/tmux-selector-go" ]]; then
+        go_binary="/home/shelluser/.config/shell-ai/tmux-selector-go"
     fi
     
     if [[ -z "$go_binary" ]]; then
@@ -103,6 +111,8 @@ test_go_binary_auto_flag() {
         go_binary="$CONFIG_DIR/../tmux-selector-go/tmux-selector"
     elif [[ -x "$CONFIG_DIR/tmux-selector-go" ]]; then
         go_binary="$CONFIG_DIR/tmux-selector-go"
+    elif [[ -x "/home/shelluser/.config/shell-ai/tmux-selector-go" ]]; then
+        go_binary="/home/shelluser/.config/shell-ai/tmux-selector-go"
     fi
     
     if [[ -z "$go_binary" ]]; then
@@ -186,6 +196,8 @@ test_go_json_output() {
         go_binary="$CONFIG_DIR/../tmux-selector-go/tmux-selector"
     elif [[ -x "$CONFIG_DIR/tmux-selector-go" ]]; then
         go_binary="$CONFIG_DIR/tmux-selector-go"
+    elif [[ -x "/home/shelluser/.config/shell-ai/tmux-selector-go" ]]; then
+        go_binary="/home/shelluser/.config/shell-ai/tmux-selector-go"
     fi
     
     if [[ -z "$go_binary" ]]; then
