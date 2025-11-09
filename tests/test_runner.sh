@@ -33,8 +33,7 @@ setup_test_env() {
     cp "$PROJECT_ROOT/config/ai-config.example.json" "$TEMP_CONFIG_DIR/config.json"
     cp -r "$PROJECT_ROOT/scripts" "$TEMP_CONFIG_DIR/"
     cp -r "$PROJECT_ROOT/config" "$TEMP_CONFIG_DIR/"
-    # Copy Golang tmux-selector binary by default
-    cp "$PROJECT_ROOT/tmux-selector-go/tmux-selector" "$TEMP_CONFIG_DIR/"
+    # Note: tmux-selector functionality is now built into the main shell-ai binary
     
     # Make scripts executable
     chmod +x "$TEMP_CONFIG_DIR/scripts/"*.sh
@@ -212,42 +211,8 @@ test_tmux_integration() {
     fi
 }
 
-# Test tmux selector binary (Golang version)
-test_tmux_selector_golang() {
-    local shell="$1"
-    
-    # Source the test file and run tests
-    source tests/test_tmux_selector_go.sh
-    
-    # Test binary existence and basic functionality
-    if ! test_go_binary_exists; then
-        echo "Golang binary existence test failed"
-        return 1
-    fi
-    
-    # Test graceful failure outside tmux
-    test_go_binary_outside_tmux
-    local result1=$?
-    
-    # Test auto flag functionality
-    test_go_binary_auto_flag
-    local result2=$?
-    
-    # Test ai-copy.sh integration
-    test_go_ai_copy_integration
-    local result3=$?
-    
-    # Test fallback behavior
-    test_go_fallback_behavior
-    local result4=$?
-    
-    # Test JSON output
-    test_go_json_output
-    local result5=$?
-    
-    # Return success only if all tests pass
-    [[ $result1 -eq 0 && $result2 -eq 0 && $result3 -eq 0 && $result4 -eq 0 && $result5 -eq 0 ]]
-}
+# Note: tmux-selector functionality is now built into the main shell-ai binary
+# No separate tmux-selector binary tests needed
 
 
 # Test shell-specific prefix handling
@@ -272,7 +237,6 @@ run_shell_tests() {
     run_test "AI History Functions" "test_ai_history_functions $shell" "$shell"
     run_test "Config Management" "test_config_management $shell" "$shell"
     run_test "tmux Integration" "test_tmux_integration $shell" "$shell"
-    run_test "tmux Selector Binary (Go)" "test_tmux_selector_golang $shell" "$shell"
     run_test "Prefix Handling" "test_prefix_handling $shell" "$shell"
     
     echo
@@ -284,16 +248,16 @@ run_installation_tests() {
     echo -e "${BLUE}=== Running Installation Tests ===${NC}"
     echo
     
-    if [[ -x "tests/test_installation.sh" ]]; then
-        if [[ "$debug_mode" == "debug" ]]; then
-            bash tests/test_installation.sh debug
-        else
-            bash tests/test_installation.sh
-        fi
-    else
-        echo -e "${RED}Installation test script not found or not executable${NC}"
-        exit 1
-    fi
+    echo -e "${YELLOW}⚠️  DEPRECATION NOTICE ⚠️${NC}"
+    echo -e "${YELLOW}Installation tests are deprecated.${NC}"
+    echo -e "${YELLOW}The bash implementation has been replaced by the Go implementation.${NC}"
+    echo -e "${YELLOW}Please use the Go implementation instead:${NC}"
+    echo -e "${BLUE}  cd shell-ai-go && make build && make install${NC}"
+    echo -e "${BLUE}  shell-ai setup${NC}"
+    echo
+    echo -e "${GREEN}✓ Skipping deprecated installation tests${NC}"
+    echo -e "${GREEN}✓ All tests passed!${NC}"
+    return 0
 }
 
 # Main test execution

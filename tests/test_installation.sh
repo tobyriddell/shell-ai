@@ -555,6 +555,7 @@ verify_no_duplicate_integration() {
     echo -e "${YELLOW}Verifying no duplicate integration in $file...${NC}"
     
     local count=$(grep -c "Shell AI Integration" "$file" 2>/dev/null || echo "0")
+    count=$(echo "$count" | tr -d '\n')
     
     if [[ "$count" -eq 1 ]]; then
         echo -e "${GREEN}✓ Single Shell AI integration found in $file${NC}"
@@ -651,7 +652,7 @@ test_bash_simple_tmux_simple_no_atuin() {
     
     # Run installer with automated responses (continue installation, skip atuin)
     echo -e "${YELLOW}    Running installer...${NC}"
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}    Installer failed${NC}"
         return 1
     fi
@@ -701,7 +702,7 @@ test_bash_simple_tmux_simple_with_atuin() {
     
     export SHELL="/bin/bash"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -720,7 +721,7 @@ test_bash_simple_tmux_oh_my_local_no_atuin() {
     
     export SHELL="/bin/bash"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -740,7 +741,7 @@ test_bash_simple_tmux_oh_my_local_with_atuin() {
     
     export SHELL="/bin/bash"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -759,7 +760,7 @@ test_bash_simple_tmux_oh_my_config_no_atuin() {
     
     export SHELL="/bin/bash"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -779,7 +780,7 @@ test_bash_simple_tmux_oh_my_config_with_atuin() {
     
     export SHELL="/bin/bash"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -798,7 +799,7 @@ test_bash_oh_my_tmux_simple_no_atuin() {
     
     export SHELL="/bin/bash"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -819,7 +820,7 @@ test_bash_oh_my_tmux_simple_with_atuin() {
     
     export SHELL="/bin/bash"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -839,7 +840,7 @@ test_bash_oh_my_tmux_oh_my_local_no_atuin() {
     
     export SHELL="/bin/bash"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -860,7 +861,7 @@ test_bash_oh_my_tmux_oh_my_local_with_atuin() {
     
     export SHELL="/bin/bash"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -880,7 +881,7 @@ test_bash_oh_my_tmux_oh_my_config_no_atuin() {
     
     export SHELL="/bin/bash"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -901,7 +902,7 @@ test_bash_oh_my_tmux_oh_my_config_with_atuin() {
     
     export SHELL="/bin/bash"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -923,7 +924,7 @@ test_zsh_simple_tmux_simple_no_atuin() {
     
     export SHELL="/bin/zsh"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -943,7 +944,7 @@ test_zsh_simple_tmux_simple_with_atuin() {
     
     export SHELL="/bin/zsh"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -962,7 +963,7 @@ test_zsh_simple_tmux_oh_my_local_no_atuin() {
     
     export SHELL="/bin/zsh"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -982,7 +983,7 @@ test_zsh_simple_tmux_oh_my_local_with_atuin() {
     
     export SHELL="/bin/zsh"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -1001,7 +1002,7 @@ test_zsh_simple_tmux_oh_my_config_no_atuin() {
     
     export SHELL="/bin/zsh"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -1021,7 +1022,7 @@ test_zsh_simple_tmux_oh_my_config_with_atuin() {
     
     export SHELL="/bin/zsh"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -1040,7 +1041,7 @@ test_zsh_oh_my_tmux_simple_no_atuin() {
     
     export SHELL="/bin/zsh"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -1061,7 +1062,7 @@ test_zsh_oh_my_tmux_simple_with_atuin() {
     
     export SHELL="/bin/zsh"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -1081,7 +1082,7 @@ test_zsh_oh_my_tmux_oh_my_local_no_atuin() {
     
     export SHELL="/bin/zsh"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -1102,7 +1103,7 @@ test_zsh_oh_my_tmux_oh_my_local_with_atuin() {
     
     export SHELL="/bin/zsh"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -1122,7 +1123,7 @@ test_zsh_oh_my_tmux_oh_my_config_no_atuin() {
     
     export SHELL="/bin/zsh"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
@@ -1143,7 +1144,7 @@ test_zsh_oh_my_tmux_oh_my_config_with_atuin() {
     
     export SHELL="/bin/zsh"
     
-    if ! run_installer "y\nn"; then
+    if ! run_installer "y\ny\nn"; then
         echo -e "${RED}✗ Installer failed${NC}"
         return 1
     fi
