@@ -31,11 +31,11 @@ LDFLAGS := -s -w
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 
 # Build targets
-build: deps
+build: deps | ensure-build-dir
 	@echo "Building $(BINARY_NAME)..."
 	go build $(GOFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) .
 
-build-release: deps
+build-release: deps | ensure-build-dir
 	@echo "Building optimized release binary..."
 	go build $(GOFLAGS) -ldflags="$(LDFLAGS) -X main.version=$(VERSION)" -o $(BUILD_DIR)/$(BINARY_NAME) .
 
@@ -112,15 +112,15 @@ watch:
 	find . -name '*.go' | entr -r make build
 
 # Cross-compilation targets
-build-linux:
+build-linux: | ensure-build-dir
 	@echo "Building for Linux..."
 	GOOS=linux GOARCH=amd64 go build $(GOFLAGS) -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-linux .
 
-build-darwin:
+build-darwin: | ensure-build-dir
 	@echo "Building for macOS..."
 	GOOS=darwin GOARCH=amd64 go build $(GOFLAGS) -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-darwin .
 
-build-windows:
+build-windows: | ensure-build-dir
 	@echo "Building for Windows..."
 	GOOS=windows GOARCH=amd64 go build $(GOFLAGS) -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-windows.exe .
 
@@ -138,8 +138,6 @@ link-to-config:
 	fi
 
 # Create build directory
-$(BUILD_DIR):
-	mkdir -p $(BUILD_DIR)
-
-# Ensure build directory exists for all build targets
-build build-release build-linux build-darwin build-windows: | $(BUILD_DIR)
+.PHONY: ensure-build-dir
+ensure-build-dir:
+	@mkdir -p $(BUILD_DIR)
