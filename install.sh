@@ -18,6 +18,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo -e "${BLUE}=== Shell AI Integration Installer ===${NC}"
 echo
+echo -e "${GREEN}🚀 Installing Go Implementation (Recommended)${NC}"
+echo
+read -p "Install Go implementation? (Y/n): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Nn]$ ]]; then
+    echo -e "${YELLOW}⚠️  Installing legacy bash implementation instead...${NC}"
+    echo -e "${YELLOW}Note: The bash implementation is deprecated.${NC}"
+    echo
+    INSTALL_GO=false
+else
+    INSTALL_GO=true
+fi
+echo
 
 # Function to detect user's shell
 detect_shell() {
@@ -344,9 +357,87 @@ install_atuin() {
     fi
 }
 
+# Install Go implementation
+install_go_implementation() {
+    echo -e "${YELLOW}Installing Go implementation...${NC}"
+    
+    # Check for Go
+    if ! command -v go >/dev/null 2>&1; then
+        echo -e "${RED}✗ Go is not installed${NC}"
+        echo -e "${YELLOW}Please install Go 1.21 or later:${NC}"
+        echo -e "${BLUE}  https://go.dev/doc/install${NC}"
+        exit 1
+    fi
+    
+    # Check Go version
+    local go_version=$(go version | awk '{print $3}' | sed 's/go//')
+    local required_version="1.21"
+    if ! printf '%s\n%s\n' "$required_version" "$go_version" | sort -V -C; then
+        echo -e "${RED}✗ Go version $go_version is too old. Need $required_version or later${NC}"
+        exit 1
+    fi
+    
+    echo -e "${GREEN}✓ Go found: $(go version)${NC}"
+    
+    # Build the binary
+    echo -e "${YELLOW}Building shell-ai binary...${NC}"
+    cd "$SCRIPT_DIR/shell-ai-go" || {
+        echo -e "${RED}✗ shell-ai-go directory not found${NC}"
+        exit 1
+    }
+    
+    if ! make build; then
+        echo -e "${RED}✗ Build failed${NC}"
+        exit 1
+    fi
+    
+    # Install binary
+    mkdir -p "$HOME/.local/bin"
+    cp build/shell-ai "$HOME/.local/bin/shell-ai"
+    chmod +x "$HOME/.local/bin/shell-ai"
+    echo -e "${GREEN}✓ Installed shell-ai to ~/.local/bin/${NC}"
+    
+    # Install tmux config
+    if [[ -f "$SCRIPT_DIR/config/tmux.conf" ]]; then
+        if [[ -f "$HOME/.tmux.conf" ]]; then
+            echo -e "${YELLOW}⚠️  ~/.tmux.conf already exists. Backing up to ~/.tmux.conf.backup${NC}"
+            cp "$HOME/.tmux.conf" "$HOME/.tmux.conf.backup"
+        fi
+        cp "$SCRIPT_DIR/config/tmux.conf" "$HOME/.tmux.conf"
+        echo -e "${GREEN}✓ Installed tmux configuration${NC}"
+    fi
+    
+    # Install shell integration
+    create_directories
+    install_shell_integration
+    
+    echo
+    echo -e "${GREEN}=== Go Implementation Installation Complete! ===${NC}"
+    echo
+    echo "Next steps:"
+    echo "1. Add ~/.local/bin to your PATH (if not already):"
+    echo "   echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.bashrc  # or ~/.zshrc"
+    echo "2. Reload your shell: source ~/.bashrc  # or source ~/.zshrc"
+    echo "3. Configure AI providers: shell-ai setup"
+    echo "4. Reload tmux config: tmux source-file ~/.tmux.conf"
+    echo
+    echo "Usage examples:"
+    echo "  shell-ai interactive  # Start interactive session"
+    echo "  shell-ai ask \"how do I find large files?\""
+    echo "  ai \"explain this command\"  # Using alias"
+    echo
+    echo "Documentation: docs/USAGE.md"
+}
+
 # Main installation
 main() {
-    echo "This script will install Shell AI Integration to your system."
+    if [[ "$INSTALL_GO" == "true" ]]; then
+        install_go_implementation
+        return
+    fi
+    
+    # Legacy bash installation
+    echo "This script will install Shell AI Integration (Legacy Bash) to your system."
     echo "Installation directory: $INSTALL_DIR"
     echo
     read -p "Continue with installation? (y/n): " -n 1 -r
@@ -389,6 +480,9 @@ main() {
     echo "  ai-fix   # fix last failed command"
     echo
     echo "Documentation: docs/USAGE.md"
+    echo
+    echo -e "${YELLOW}⚠️  Note: The bash implementation is deprecated.${NC}"
+    echo -e "${YELLOW}Consider migrating to the Go implementation for better performance.${NC}"
 }
 
 main "$@" 

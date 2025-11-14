@@ -1,5 +1,8 @@
 # Shell AI Integration - Detailed Usage Guide
 
+> **🚀 PRIMARY**: This guide covers the **Go implementation** (recommended).  
+> **⚠️ LEGACY**: For the deprecated bash implementation, see [Legacy Bash Implementation](#legacy-bash-implementation-deprecated) section below.
+
 This guide provides comprehensive documentation for using the Shell AI Integration system.
 
 ## Table of Contents
@@ -14,24 +17,29 @@ This guide provides comprehensive documentation for using the Shell AI Integrati
 
 ## Installation
 
-### Native Installation (Recommended)
+### Go Implementation (Recommended)
 
 ```bash
+# Clone and install
 git clone <repository-url>
 cd shell-ai
-chmod +x install.sh
-./install.sh
+make install
+
+# Configure AI providers
+shell-ai setup
 
 # Reload shell (bash or zsh)
-source ~/.bashrc
-source ~/.zshrc
+source ~/.bashrc  # or source ~/.zshrc
+
+# Reload tmux configuration
+tmux source-file ~/.tmux.conf
 ```
 
 The installation process will:
-1. Install main scripts to `~/.config/shell-ai/`
-2. Install AI provider modules to `~/.config/shell-ai/providers/`
-3. Set up shell integration (bashrc/zshrc)
-4. Configure tmux integration (if tmux is available)
+1. Build the Go binary
+2. Install `shell-ai` to `~/.local/bin/`
+3. Copy tmux configuration to `~/.tmux.conf`
+4. Set up shell aliases in `~/.bashrc` or `~/.zshrc`
 
 ### Docker (Development)
 
@@ -43,92 +51,153 @@ make dev-bash    # Development with project mounted
 
 ## Configuration
 
-```bash
-# Interactive setup
-ai-setup
+### Interactive Setup
 
+```bash
+# Interactive configuration wizard
+shell-ai setup
+```
+
+This will guide you through:
+1. Selecting AI providers to enable
+2. Entering API keys securely
+3. Configuring model preferences
+4. Setting up context and conversation settings
+
+### Configuration File
+
+The Go implementation uses YAML format (`~/.config/shell-ai/config.yaml`):
+
+```yaml
+providers:
+  openai:
+    enabled: true
+    api_key: "sk-..."
+    model: "gpt-4"
+    max_tokens: 2000
+    temperature: 0.7
+  
+  anthropic:
+    enabled: false
+    api_key: "sk-ant-..."
+    model: "claude-3-sonnet-20240229"
+    max_tokens: 2000
+    temperature: 0.7
+
+  google:
+    enabled: false
+    api_key: "AIza..."
+    model: "gemini-1.5-flash"
+    max_tokens: 2000
+    temperature: 0.7
+
+  ollama:
+    enabled: false
+    host: "http://localhost:11434"
+    model: "llama2"
+    max_tokens: 2000
+    temperature: 0.7
+
+settings:
+  auto_copy: false
+  auto_copy_prompt: true
+  max_history_lines: 50
+  max_pane_lines: 100
+  conversation_ttl_hours: 24
+```
+
+### Secure Configuration
+
+```bash
 # Secure config file
-chmod 600 ~/.config/shell-ai/config.json
+chmod 600 ~/.config/shell-ai/config.yaml
 ```
 
-### Modular Architecture
+## Basic Usage
 
-The shell-ai system uses a runtime provider loading architecture:
-
-```
-~/.config/shell-ai/
-├── ai-shell.sh         # Main shell integration
-├── ai-setup.sh         # Configuration script
-├── providers/          # AI provider modules
-│   ├── openai.sh
-│   ├── anthropic.sh
-│   ├── google.sh
-│   └── ollama.sh
-└── config.json         # Configuration file
-```
-
-**Key benefits:**
-- **Environment-specific deployments**: Include only needed providers
-- **No build step**: Providers are loaded at runtime
-- **Easy customization**: Add custom providers by creating new files
-- **Secure isolation**: Provider code can be kept separate per environment
-
-Edit `~/.config/shell-ai/config.json`:
-```json
-{
-  "providers": {
-    "openai": {
-      "api_key": "sk-proj-...",
-      "model": "gpt-4",
-      "enabled": true
-    },
-    "anthropic": {
-      "api_key": "sk-ant-...",
-      "model": "claude-3-sonnet-20240229",
-      "enabled": false
-    },
-    "google": {
-      "api_key": "AIza...",
-      "model": "gemini-2.5-pro",
-      "enabled": false
-    },
-    "ollama": {
-      "host": "http://localhost:11434",
-      "model": "llama2:7b",
-      "enabled": false
-    }
-  }
-}
-```
-
-## Basic Usage (bash/zsh)
+### Interactive Sessions (Recommended)
 
 ```bash
-# @ prefix queries
-@what does ps aux do
-@how to find files larger than 100MB
-@fix this error: command not found
-@write a script to backup my home directory
+# Start interactive session
+shell-ai interactive
 
-# Direct commands
-ai "explain the ls command"
-ai --provider anthropic "help debug this script"
-ai-here "what are these files for?"
-ai-last "explain this command"
-ai-fix "fix the last failed command"
+# Or use the alias
+ai-interactive
+```
+
+In interactive mode:
+- Type your questions naturally
+- Use `/send` to send commands to tmux panes
+- Use `/context` to view current context
+- Use `/clear` to clear conversation history
+- Use `/help` for available commands
+- Press `Ctrl-D` to exit
+
+### One-shot Queries
+
+```bash
+# Basic query
+shell-ai ask "how do I find large files?"
+
+# Or use the alias
+ai "how do I find large files?"
+
+# @ prefix still works (via shell integration)
+@what does ps aux do
+
+# Specify provider
+shell-ai ask --provider openai "explain this error"
 
 # Context control
-ai --context              # Show context sent to AI
-ai --no-history "query"   # Exclude shell history
-ai --no-pane "query"      # Exclude tmux content
-ai --history-lines 10 --pane-lines 20 "query"  # Limit context
+shell-ai ask --no-history "query"   # Exclude shell history
+shell-ai ask --no-panes "query"      # Exclude tmux content
+shell-ai ask -c 20 "query"           # Limit context lines
+```
+
+### Helper Functions
+
+```bash
+# Explain last command
+ai-last
+
+# Ask about current directory
+ai-here "what are these files for?"
+
+# Fix last failed command
+ai-fix
+```
+
+### Testing Providers
+
+```bash
+# Test all providers
+shell-ai test
+
+# Or use the alias
+ai-test
 ```
 
 ## Advanced Features
 
-**Response Management**: Use `ai-copy` for interactive menu to view, copy, and execute AI responses.
+### Response Management
 
-**Context**: AI receives system info, shell history (atuin), tmux content, and working directory.
+In interactive mode, use the `/send` command to send AI-generated commands to tmux panes:
+```bash
+shell-ai interactive
+🤖 AI> How do I find large files?
+# AI responds with: find . -type f -size +100M
+🤖 AI> /send
+# Select target pane, then confirm execution
+```
+
+### Context Management
+
+The AI automatically receives:
+- System information
+- Shell history (via atuin if available)
+- Current tmux pane content
+- Working directory and file listings
+- Previous conversation context
 
 ```bash
 # Example workflow
@@ -136,8 +205,15 @@ cd /var/log
 ls -la
 tail -f syslog
 # Ctrl-C to stop
-@analyze these log files for errors
+shell-ai ask "analyze these log files for errors"
 ```
+
+### Conversation Context
+
+The Go implementation maintains conversation context across multiple queries:
+- Context is automatically included in follow-up questions
+- Context expires after 24 hours (configurable)
+- Use `/clear` in interactive mode to reset context
 
 ## tmux Integration
 
@@ -147,57 +223,71 @@ All keybindings use the Ctrl-A prefix:
 
 | Keybinding | Action |
 |------------|--------|
-| `Ctrl-A + A` | Toggle AI input pane |
-| `Ctrl-A + I` | Quick AI query prompt |
-| `Ctrl-A + C` | AI response manager |
+| `Ctrl-A + S` | Start interactive AI session |
+| `Ctrl-A + I` | Quick AI query with prompt |
+| `Ctrl-A + Q` | One-shot AI query |
 | `Ctrl-A + T` | Test AI providers |
+| `Ctrl-A + E` | Explain current pane output |
 | `Ctrl-A + X` | Show AI context |
+| `Ctrl-A + C` | AI copy manager (interactive mode) |
 
-### AI Input Pane Workflow
+### Built-in Pane Selection
 
-1. **Create pane**: Press `Ctrl-A + A`
-2. **Query AI**: Type in the new pane: `ai "your question"`
-3. **Review response**: Output appears in main pane
-4. **Execute commands**: Use `ai-copy` to extract and run commands
-5. **Close pane**: Type `exit` in AI pane
+The Go implementation includes built-in tmux pane selection:
+- Automatically detects when you're in a tmux session
+- Visual pane selector with arrow key navigation
+- Safe command execution with confirmation prompts
+- Context includes all visible pane content
 
-### Pane Management
+### Interactive Session Workflow
 
-```bash
-# Create AI pane manually
-ai-pane create
-
-# Toggle AI pane
-ai-pane toggle
-
-# Close AI pane
-ai-pane close
-```
+1. **Start session**: Press `Ctrl-A + S` or run `shell-ai interactive`
+2. **Ask questions**: Type naturally in the interactive prompt
+3. **Send commands**: Use `/send` to send commands to selected panes
+4. **Review context**: Use `/context` to see what context is being sent
+5. **Exit**: Press `Ctrl-D` to exit
 
 ### tmux Configuration
 
-The system modifies `~/.tmux.conf` with:
+The installation automatically configures `~/.tmux.conf` with:
 - Ctrl-A prefix (instead of Ctrl-B)
-- Vi-mode keys
+- Vi-mode keys for buffer searching
 - AI integration keybindings
 - Enhanced pane navigation
 
 ## Troubleshooting
 
+### Common Issues
+
 ```bash
 # Commands not found
 source ~/.bashrc  # or ~/.zshrc
-chmod +x ~/.config/shell-ai/*.sh
+# Ensure ~/.local/bin is in PATH
+export PATH="$HOME/.local/bin:$PATH"
 
-# AI not responding  
-ai-test
-ai-setup
+# AI not responding
+shell-ai test
+shell-ai setup
 
 # tmux issues
 tmux source-file ~/.tmux.conf
 
-# Debug
-ai --context
+# Check configuration
+cat ~/.config/shell-ai/config.yaml
+
+# Rebuild if needed
+cd shell-ai-go && make clean && make build
+```
+
+### Debug Mode
+
+```bash
+# Test with minimal context
+shell-ai ask --no-history --no-panes "test"
+
+# Check if binary is accessible
+which shell-ai
+shell-ai --help
 ```
 
 ### zsh Globbing Issues
@@ -343,19 +433,74 @@ rm ~/.config/shell-ai/providers/ollama.sh
 
 ## API Reference
 
+### Go Implementation Commands
+
 ```bash
 # Main commands
-ai [OPTIONS] [PROMPT]              # Main AI integration
-ai-setup                           # Interactive configuration
-ai-copy                           # Response management
+shell-ai interactive              # Start interactive session
+shell-ai ask [PROMPT]             # Single question
+shell-ai setup                     # Interactive configuration
+shell-ai test                      # Test providers
+
+# Aliases (automatically configured)
+ai                                # Alias for shell-ai ask
+ai-interactive                     # Alias for shell-ai interactive
+ai-setup                          # Alias for shell-ai setup
+ai-test                           # Alias for shell-ai test
+
+# Helper functions
 ai-last                           # Explain last command
 ai-here [context]                 # Ask about current directory
 ai-fix                            # Fix last failed command
-ai-test                           # Test providers
 
 # Key options
---help, --test, --context
 --provider [openai|anthropic|google|ollama]
---history-lines N, --pane-lines N
---no-history, --no-pane
+--no-history                      # Exclude shell history
+--no-panes                        # Exclude tmux content
+-c, --context-lines N              # Limit context lines
+```
+
+### Interactive Mode Commands
+
+When in `shell-ai interactive` mode:
+- `/send` - Send last commands to tmux pane
+- `/context` - Show current context
+- `/clear` - Clear conversation history
+- `/help` - Show help
+- `Ctrl-D` - Exit
+
+---
+
+## Legacy Bash Implementation (Deprecated)
+
+> **⚠️ DEPRECATED**: The bash implementation is no longer recommended.  
+> **🚀 MIGRATE**: Use the Go implementation above for the best experience.
+
+### Installation
+
+```bash
+git clone <repository-url>
+cd shell-ai
+chmod +x install.sh
+./install.sh
+```
+
+### Usage
+
+```bash
+# @ prefix queries
+@what does ps aux do
+
+# Direct commands
+ai "explain the ls command"
+ai-setup
+ai-copy
+ai-test
+```
+
+### Configuration
+
+Edit `~/.config/shell-ai/config.json` (JSON format, not YAML).
+
+For more details on the legacy bash implementation, see the [Migration Guide](../README.md#-migration-from-bash-to-go).
 ``` 

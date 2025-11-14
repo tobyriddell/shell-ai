@@ -1,46 +1,13 @@
-# AI Integration Functions for Zsh
-export PATH="$HOME/.config/shell-ai:$PATH"
+# Shell AI Integration (Go Implementation) for Zsh
+# Ensure shell-ai is in PATH
+export PATH="$HOME/.local/bin:$PATH"
 
-# AI command prefix handler
-ai_prefix_handler() {
-    local cmd="$1"
-    shift
-    local prompt="$*"
-    
-    case "$cmd" in
-        "ai"|"AI")
-            $HOME/.config/shell-ai/ai-shell.sh "$prompt"
-            ;;
-        "ai-setup")
-            $HOME/.config/shell-ai/ai-setup.sh
-            ;;
-        "ai-copy")
-            $HOME/.config/shell-ai/ai-copy.sh
-            ;;
-        "ai-context")
-            $HOME/.config/shell-ai/ai-shell.sh --context
-            ;;
-        "ai-test")
-            $HOME/.config/shell-ai/ai-shell.sh --test
-            ;;
-        "ai-pane")
-            $HOME/.config/shell-ai/tmux-ai-pane.sh
-            ;;
-        *)
-            echo "Unknown AI command: $cmd"
-            echo "Available commands: ai, ai-setup, ai-copy, ai-context, ai-test, ai-pane"
-            return 1
-            ;;
-    esac
-}
-
-# Create aliases for AI commands
-alias ai='$HOME/.config/shell-ai/ai-shell.sh'
-alias ai-setup='$HOME/.config/shell-ai/ai-setup.sh'
-alias ai-copy='$HOME/.config/shell-ai/ai-copy.sh'
-alias ai-context='$HOME/.config/shell-ai/ai-shell.sh --context'
-alias ai-test='$HOME/.config/shell-ai/ai-shell.sh --test'
-alias ai-pane='$HOME/.config/shell-ai/tmux-ai-pane.sh'
+# Create aliases for AI commands (Go implementation)
+alias ai='shell-ai ask'
+alias ai-interactive='shell-ai interactive'
+alias ai-setup='shell-ai setup'
+alias ai-test='shell-ai test'
+alias ai-go='shell-ai'
 
 # Enhanced command_not_found_handler for AI prefix (note: zsh uses command_not_found_handler)
 command_not_found_handler() {
@@ -58,7 +25,7 @@ command_not_found_handler() {
         
         if [[ -n "$ai_prompt" ]]; then
             echo "🤖 AI Query: $ai_prompt"
-            $HOME/.config/shell-ai/ai-shell.sh "$ai_prompt"
+            shell-ai ask "$ai_prompt"
         else
             echo "Usage: @<prompt> - Ask AI a question"
             echo "Example: @how do I list files recursively"
@@ -84,7 +51,7 @@ ai-last() {
     if [[ -n "$last_cmd" ]]; then
         # Trim leading whitespace from zsh history
         last_cmd=$(echo "$last_cmd" | sed 's/^[[:space:]]*//')
-        $HOME/.config/shell-ai/ai-shell.sh "Explain this command: $last_cmd"
+        shell-ai ask "Explain this command: $last_cmd"
     else
         echo "No recent command found"
     fi
@@ -94,7 +61,7 @@ ai-last() {
 ai-here() {
     local current_dir=$(pwd)
     local file_list=$(ls -la 2>/dev/null | head -20)
-    $HOME/.config/shell-ai/ai-shell.sh "I'm in directory $current_dir with these files: $file_list. $*"
+    shell-ai ask "I'm in directory $current_dir with these files: $file_list. $*"
 }
 
 # Function to ask AI to fix the last command
@@ -110,7 +77,7 @@ ai-fix() {
     if [[ -n "$last_cmd" ]]; then
         # Trim leading whitespace from zsh history
         last_cmd=$(echo "$last_cmd" | sed 's/^[[:space:]]*//')
-        $HOME/.config/shell-ai/ai-shell.sh "The command '$last_cmd' failed. Please suggest how to fix it or provide the correct command."
+        shell-ai ask "The command '$last_cmd' failed. Please suggest how to fix it or provide the correct command."
     else
         echo "No recent command found"
     fi

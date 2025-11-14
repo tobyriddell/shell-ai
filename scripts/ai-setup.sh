@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# ⚠️  DEPRECATED: This is the legacy bash implementation
+# 🚀  RECOMMENDED: Use 'shell-ai setup' (Go implementation) instead
+
 CONFIG_DIR="$HOME/.config/shell-ai"
 CONFIG_FILE="$CONFIG_DIR/config.json"
 

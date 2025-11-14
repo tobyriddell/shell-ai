@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# ⚠️  DEPRECATED: This is the legacy bash implementation
+# 🚀  RECOMMENDED: Use 'shell-ai interactive' with '/send' command (Go implementation) instead
+
 CONFIG_DIR="$HOME/.config/shell-ai"
 RESPONSE_FILE="$CONFIG_DIR/last_response.txt"
 
@@ -336,15 +339,13 @@ fallback_pane_selector() {
     done
 }
 
-# Interactive pane selector using Rust binary with fallback
+# Interactive pane selector using tmux-selector binary with fallback
 interactive_pane_selector() {
     # Look for the tmux-selector binary in multiple locations
     local tmux_selector=""
     
     # Check if we have the binary in the expected locations
-    if [[ -x "$CONFIG_DIR/../tmux-selector/target/release/tmux-selector" ]]; then
-        tmux_selector="$CONFIG_DIR/../tmux-selector/target/release/tmux-selector"
-    elif [[ -x "$CONFIG_DIR/tmux-selector" ]]; then
+    if [[ -x "$CONFIG_DIR/tmux-selector" ]]; then
         tmux_selector="$CONFIG_DIR/tmux-selector"
     elif command -v tmux-selector >/dev/null 2>&1; then
         tmux_selector="tmux-selector"
@@ -354,8 +355,8 @@ interactive_pane_selector() {
         return $?
     fi
     
-    # Try using the Rust binary first
-    # The binary now uses stderr for interactive display and stdout for the result
+    # Try using the tmux-selector binary first
+    # The binary uses stderr for interactive display and stdout for the result
     local result
     result=$("$tmux_selector" 2>/dev/tty)
     local exit_code=$?
@@ -365,7 +366,7 @@ interactive_pane_selector() {
         return 0
     fi
     
-    # Rust binary failed or returned empty result, use fallback
+    # tmux-selector binary failed or returned empty result, use fallback
     fallback_pane_selector
     return $?
 }

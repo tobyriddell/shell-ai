@@ -54,9 +54,6 @@ docker-compose.override.yml
 **/last_response.txt
 **/context.tmp
 
-# Rust build artifacts
-tmux-selector-rust/target/
-tmux-selector-rust/Cargo.lock 
-
 # Git hooks
 .git/hooks/post-commit 
+shell-ai-go/build/

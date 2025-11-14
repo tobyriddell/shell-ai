@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# ⚠️  DEPRECATED: This is the legacy bash implementation
+# 🚀  RECOMMENDED: Use 'shell-ai interactive' (Go implementation) instead
+
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'

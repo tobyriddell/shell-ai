@@ -30,7 +30,17 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     autotools-dev \
     automake \
+    file \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Go 1.21+
+RUN wget https://go.dev/dl/go1.21.13.linux-amd64.tar.gz && \
+    echo "502fc16d5910562461e6a6631fb6377de2322aad7304bf2bcd23500ba9dab4a7  go1.21.13.linux-amd64.tar.gz" | sha256sum -c - && \
+    tar -C /usr/local -xzf go1.21.13.linux-amd64.tar.gz && \
+    rm go1.21.13.linux-amd64.tar.gz
+
+# Add Go to PATH
+ENV PATH=$PATH:/usr/local/go/bin:/usr/bin/go
 
 # Build and install tmux 3.5a from source with checksum verification, we need at least 3.5 to fix the 'split-window -p' bug
 RUN cd /tmp && \
@@ -65,40 +75,83 @@ RUN curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh
 # Configure zsh to use atuin
 RUN echo 'eval "$(atuin init zsh)"' >> /home/shelluser/.zshrc
 
-# Create AI integration directory
-RUN zsh -c "mkdir -p ~/.config/shell-ai"
+# Create AI integration directory and local bin
+RUN zsh -c "mkdir -p ~/.config/shell-ai ~/.local/bin"
 
 # Copy entire repository content
 COPY --chown=$USER:$USER . /home/shelluser/
 
-# Copy the Rust binary to the config directory
-COPY --chown=$USER:$USER tmux-selector-rust/target/release/tmux-selector /home/shelluser/.config/shell-ai/tmux-selector-rust
+# ============================================================================
+# Go Implementation (Primary) - Build and Install
+# ============================================================================
+# The Go implementation is the primary and recommended version.
+# It provides better performance, conversational context, and enhanced features.
 
-# Copy the Go binary to the config directory
-COPY --chown=$USER:$USER tmux-selector-go/tmux-selector /home/shelluser/.config/shell-ai/tmux-selector-go
+# Build the Go implementation (shell-ai-go)
+RUN cd /home/shelluser/shell-ai-go && \
+    /usr/local/go/bin/go mod download && \
+    /usr/local/go/bin/go build -o build/shell-ai . && \
+    chmod +x build/shell-ai
 
-# Use the Golang tmux-selector binary by default
-COPY --chown=$USER:$USER tmux-selector-go/tmux-selector /home/shelluser/.config/shell-ai/tmux-selector
+# Install the Go binary as the primary shell-ai command (switch to root for system-wide installation)
+USER root
+RUN cp /home/shelluser/shell-ai-go/build/shell-ai /usr/local/bin/shell-ai && \
+    chmod +x /usr/local/bin/shell-ai
 
-# Copy AI integration scripts and providers to expected location and make them executable
+# Switch back to shelluser and create local symlink
+USER $USER
+RUN ln -sf /usr/local/bin/shell-ai /home/shelluser/.local/bin/shell-ai
+
+# Note: tmux-selector functionality is now built into the main shell-ai binary
+# No separate tmux-selector binary needed
+
+# ============================================================================
+# Legacy Bash Implementation (Deprecated)
+# ============================================================================
+# The bash scripts are kept for backward compatibility only.
+# They are deprecated and will not receive new features.
+# Users should migrate to the Go implementation.
+
+# Copy AI integration scripts and providers to expected location (for legacy bash support)
 RUN cp -r /home/shelluser/scripts/* /home/shelluser/.config/shell-ai/ && \
     cp -r /home/shelluser/providers /home/shelluser/.config/shell-ai/ && \
+    cp /home/shelluser/create_tmux_layout.sh /home/shelluser/.config/shell-ai/ && \
     chmod +x /home/shelluser/.config/shell-ai/*.sh && \
     chmod +x /home/shelluser/.config/shell-ai/providers/*.sh
 
 # Copy configuration files to expected locations
 RUN cp /home/shelluser/config/tmux.conf /home/shelluser/.tmux.conf && \
-    cp /home/shelluser/config/zshrc-ai.sh /home/shelluser/.config/shell-ai/ && \
-    cp /home/shelluser/config/ai-config.example.json /home/shelluser/.config/shell-ai/config.json
+    cp /home/shelluser/config/zshrc-ai.sh /home/shelluser/.config/shell-ai/
+# Copy the Go implementation helper script
+RUN cp /home/shelluser/shell-ai-go/scripts/shell-ai-copy.sh /home/shelluser/.config/shell-ai/ && \
+    chmod +x /home/shelluser/.config/shell-ai/shell-ai-copy.sh
 
 # Verify scripts were copied correctly
 RUN ls -la /home/shelluser/.config/shell-ai/
 
-# Add AI integration to zsh
-RUN zsh -c "cat ~/.config/shell-ai/zshrc-ai.sh >> ~/.zshrc"
+# ============================================================================
+# Shell Integration Configuration
+# ============================================================================
+# Configure shell to use Go implementation as primary, with bash scripts as fallback
+
+# Add local bin to PATH and AI integration to zsh
+# Note: zshrc-ai.sh has been updated to use Go implementation by default
+RUN zsh -c "echo 'export PATH=\$HOME/.local/bin:\$PATH' >> ~/.zshrc" && \
+    zsh -c "cat ~/.config/shell-ai/zshrc-ai.sh >> ~/.zshrc"
+
+# Add Go shell-ai aliases and integration (Primary)
+# These aliases point to the Go implementation
+RUN zsh -c "echo '' >> ~/.zshrc" && \
+    zsh -c "echo '# Shell AI Go Implementation (Primary)' >> ~/.zshrc" && \
+    zsh -c "echo 'alias ai=\"shell-ai ask\"' >> ~/.zshrc" && \
+    zsh -c "echo 'alias ai-interactive=\"shell-ai interactive\"' >> ~/.zshrc" && \
+    zsh -c "echo 'alias ai-setup=\"shell-ai setup\"' >> ~/.zshrc" && \
+    zsh -c "echo 'alias ai-test=\"shell-ai test\"' >> ~/.zshrc" && \
+    zsh -c "echo 'alias ai-go=\"shell-ai\"' >> ~/.zshrc" && \
+    zsh -c "echo '' >> ~/.zshrc"
 
 # Add welcome message to zshrc
-RUN zsh -c "echo '' >> ~/.zshrc && echo 'if [[ -f \$HOME/.config/shell-ai/welcome.sh ]]; then zsh \$HOME/.config/shell-ai/welcome.sh; fi' >> ~/.zshrc"
+RUN zsh -c "echo 'if [[ -f \$HOME/.config/shell-ai/welcome.sh ]]; then zsh \$HOME/.config/shell-ai/welcome.sh; fi' >> ~/.zshrc"
 
 # Set default command
 CMD ["/bin/zsh"] 
