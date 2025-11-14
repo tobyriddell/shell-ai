@@ -81,6 +81,12 @@ RUN zsh -c "mkdir -p ~/.config/shell-ai ~/.local/bin"
 # Copy entire repository content
 COPY --chown=$USER:$USER . /home/shelluser/
 
+# ============================================================================
+# Go Implementation (Primary) - Build and Install
+# ============================================================================
+# The Go implementation is the primary and recommended version.
+# It provides better performance, conversational context, and enhanced features.
+
 # Build the Go implementation (shell-ai-go)
 RUN cd /home/shelluser/shell-ai-go && \
     /usr/local/go/bin/go mod download && \
@@ -99,6 +105,13 @@ RUN ln -sf /usr/local/bin/shell-ai /home/shelluser/.local/bin/shell-ai
 # Note: tmux-selector functionality is now built into the main shell-ai binary
 # No separate tmux-selector binary needed
 
+# ============================================================================
+# Legacy Bash Implementation (Deprecated)
+# ============================================================================
+# The bash scripts are kept for backward compatibility only.
+# They are deprecated and will not receive new features.
+# Users should migrate to the Go implementation.
+
 # Copy AI integration scripts and providers to expected location (for legacy bash support)
 RUN cp -r /home/shelluser/scripts/* /home/shelluser/.config/shell-ai/ && \
     cp -r /home/shelluser/providers /home/shelluser/.config/shell-ai/ && \
@@ -116,11 +129,18 @@ RUN cp /home/shelluser/shell-ai-go/scripts/shell-ai-copy.sh /home/shelluser/.con
 # Verify scripts were copied correctly
 RUN ls -la /home/shelluser/.config/shell-ai/
 
+# ============================================================================
+# Shell Integration Configuration
+# ============================================================================
+# Configure shell to use Go implementation as primary, with bash scripts as fallback
+
 # Add local bin to PATH and AI integration to zsh
+# Note: zshrc-ai.sh has been updated to use Go implementation by default
 RUN zsh -c "echo 'export PATH=\$HOME/.local/bin:\$PATH' >> ~/.zshrc" && \
     zsh -c "cat ~/.config/shell-ai/zshrc-ai.sh >> ~/.zshrc"
 
-# Add Go shell-ai aliases and integration
+# Add Go shell-ai aliases and integration (Primary)
+# These aliases point to the Go implementation
 RUN zsh -c "echo '' >> ~/.zshrc" && \
     zsh -c "echo '# Shell AI Go Implementation (Primary)' >> ~/.zshrc" && \
     zsh -c "echo 'alias ai=\"shell-ai ask\"' >> ~/.zshrc" && \

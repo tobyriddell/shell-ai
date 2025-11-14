@@ -1,7 +1,12 @@
 #!/bin/bash
 
-# Test Runner for Shell AI Integration
-# Runs tests for both bash and zsh shells
+# Test Runner for Shell AI Integration (Legacy Bash Implementation)
+# 
+# ⚠️  NOTE: This test suite is for the deprecated bash implementation.
+# 🚀 For Go implementation tests, see: tests/test_docker_go.sh
+# 
+# These tests are maintained for backward compatibility only.
+# New development should focus on the Go implementation.
 
 set -e
 

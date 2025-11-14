@@ -56,3 +56,4 @@ docker-compose.override.yml
 
 # Git hooks
 .git/hooks/post-commit 
+shell-ai-go/build/

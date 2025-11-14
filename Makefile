@@ -35,6 +35,53 @@ help: ## Show this help message
 .PHONY: all
 all: bash zsh ## Build both bash and zsh images
 
+.PHONY: build
+build: ## Build the Go binary
+	@$(MAKE) -C shell-ai-go build
+
+.PHONY: install
+install: build ## Install shell-ai binary and configuration
+	@echo "Installing Shell AI (Go Implementation)..."
+	@mkdir -p ~/.local/bin
+	@mkdir -p ~/.config/shell-ai
+	@cp shell-ai-go/build/shell-ai ~/.local/bin/shell-ai
+	@chmod +x ~/.local/bin/shell-ai
+	@echo "✓ Installed shell-ai binary to ~/.local/bin/"
+	@if [ -f ~/.tmux.conf ]; then \
+		echo "⚠️  ~/.tmux.conf already exists. Backing up to ~/.tmux.conf.backup"; \
+		cp ~/.tmux.conf ~/.tmux.conf.backup; \
+	fi
+	@cp config/tmux.conf ~/.tmux.conf
+	@echo "✓ Installed tmux configuration to ~/.tmux.conf"
+	@echo ""
+	@echo "Next steps:"
+	@echo "1. Add ~/.local/bin to your PATH (if not already):"
+	@echo "   echo 'export PATH=\$$HOME/.local/bin:\$$PATH' >> ~/.bashrc  # or ~/.zshrc"
+	@echo "2. Reload your shell: source ~/.bashrc  # or source ~/.zshrc"
+	@echo "3. Configure AI providers: shell-ai setup"
+	@echo "4. Reload tmux config: tmux source-file ~/.tmux.conf"
+	@echo ""
+	@echo "✓ Installation complete!"
+
+.PHONY: install-system
+install-system: build ## Install shell-ai binary system-wide (requires sudo)
+	@echo "Installing Shell AI (Go Implementation) system-wide..."
+	@sudo cp shell-ai-go/build/shell-ai /usr/local/bin/shell-ai
+	@sudo chmod +x /usr/local/bin/shell-ai
+	@echo "✓ Installed shell-ai binary to /usr/local/bin/"
+	@if [ -f ~/.tmux.conf ]; then \
+		echo "⚠️  ~/.tmux.conf already exists. Backing up to ~/.tmux.conf.backup"; \
+		cp ~/.tmux.conf ~/.tmux.conf.backup; \
+	fi
+	@cp config/tmux.conf ~/.tmux.conf
+	@echo "✓ Installed tmux configuration to ~/.tmux.conf"
+	@echo ""
+	@echo "Next steps:"
+	@echo "1. Configure AI providers: shell-ai setup"
+	@echo "2. Reload tmux config: tmux source-file ~/.tmux.conf"
+	@echo ""
+	@echo "✓ Installation complete!"
+
 .PHONY: force-bash force-zsh force-all
 force-bash: ## Force rebuild bash image (ignore dependencies)
 	@rm -f $(BASH_STAMP)

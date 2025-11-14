@@ -30,40 +30,66 @@ An AI-enhanced shell environment that seamlessly integrates multiple AI provider
 - **⌨️ Interactive Sessions**: Full shell-like experience with Ctrl-D termination
 - **🧪 Comprehensive Testing**: 85%+ test coverage with robust error handling
 
-### Bash Implementation Features (Legacy - Deprecated)
-- **Modular Architecture**: Runtime provider loading for easy customization
-- **Two Prompt Methods**: `@` prefix queries and dedicated tmux panes  
-- **Docker Development**: Pre-configured containers for bash and zsh
-- **⚠️ Note**: This implementation is maintained for backward compatibility only
+### ⚠️ Bash Implementation Features (Legacy - Deprecated)
+- **Status**: Maintained for backward compatibility only
+- **Recommendation**: Migrate to Go implementation for better performance and features
+- **⚠️ Note**: No new features will be added to the bash implementation
 
 ## 📋 Installation & Quick Start
-
-## Go Implementation (Recommended)
 
 ### Prerequisites
 - Go 1.21 or later
 - tmux (for tmux integration)
 - atuin (optional, for enhanced history)
 
-### Installation
+### Quick Installation
 
-1. **Clone and Build**:
-   ```bash
-   git clone <repository-url>
-   cd shell-ai/shell-ai-go
-   make build
-   ```
+```bash
+# Clone the repository
+git clone <repository-url>
+cd shell-ai
 
-2. **Install to PATH**:
-   ```bash
-   make install
-   # Or manually: cp build/shell-ai ~/.local/bin/
-   ```
+# Build and install (installs to ~/.local/bin/)
+make install
 
-3. **Configure AI Providers**:
-   ```bash
-   shell-ai setup
-   ```
+# Configure AI providers
+shell-ai setup
+
+# Add to PATH if not already (add to ~/.bashrc or ~/.zshrc)
+export PATH="$HOME/.local/bin:$PATH"
+source ~/.bashrc  # or source ~/.zshrc
+
+# Reload tmux configuration
+tmux source-file ~/.tmux.conf
+```
+
+### Alternative: System-wide Installation
+
+```bash
+# Install to /usr/local/bin (requires sudo)
+make install-system
+shell-ai setup
+```
+
+### Manual Installation
+
+If you prefer manual installation:
+
+```bash
+# Build the binary
+cd shell-ai-go
+make build
+
+# Install to your preferred location
+cp build/shell-ai ~/.local/bin/shell-ai
+chmod +x ~/.local/bin/shell-ai
+
+# Copy tmux configuration
+cp ../config/tmux.conf ~/.tmux.conf
+
+# Configure
+shell-ai setup
+```
 
 ### Usage
 
@@ -86,9 +112,23 @@ shell-ai ask --provider openai "explain this error"
 - `shell-ai test` - Test provider connections
 - Use `Ctrl-D` to exit interactive sessions
 
+**Shell Aliases** (automatically configured):
+- `ai` → `shell-ai ask`
+- `ai-interactive` → `shell-ai interactive`
+- `ai-setup` → `shell-ai setup`
+- `ai-test` → `shell-ai test`
+
+**tmux Keybindings** (Ctrl-A prefix):
+- `Ctrl-A + S` - Start interactive AI session
+- `Ctrl-A + I` - Quick AI query with prompt
+- `Ctrl-A + Q` - One-shot AI query
+- `Ctrl-A + T` - Test AI providers
+- `Ctrl-A + E` - Explain current pane output
+- `Ctrl-A + X` - Show AI context
+
 ---
 
-## Bash Implementation (Legacy - Deprecated)
+## ⚠️ Bash Implementation (Legacy - Deprecated)
 
 > **⚠️ DEPRECATED**: The bash implementation is maintained for backward compatibility only.  
 > **🚀 RECOMMENDED**: Use the Go implementation above for the best experience.
@@ -301,31 +341,18 @@ The Go implementation includes built-in pane selection:
 - Safe command execution with confirmation
 - Context includes all pane content
 
-### Bash Implementation (Legacy)
+### ⚠️ Bash Implementation (Legacy - Deprecated)
 
-#### Command Line (bash/zsh)
-```bash
-# @ prefix queries
-@explain the ps command
-@fix this error: permission denied  
-@how do I find files larger than 1GB
+> **⚠️ DEPRECATED**: The bash implementation is no longer recommended.  
+> **🚀 MIGRATE**: Use the Go implementation above for the best experience.
 
-# Direct commands
-ai "help me write a script to backup files"
-ai-last    # Explain last command
-ai-fix     # Fix last failed command
-ai-here    # Ask about current directory
-```
+For users still on the bash implementation, see [Migration Guide](#-migration-from-bash-to-go) below.
 
-#### tmux Integration
-**Keybindings** (Ctrl-A prefix key assumed):
-- `A`: Toggle AI input pane
-- `I`: Quick AI query prompt  
-- `C`: AI response manager
-- `T`: Test AI providers
-- `X`: Show AI context
-
-**Workflow**: `Ctrl-A + A` → type query → use `ai-copy` to execute responses
+**Legacy Commands** (bash implementation only):
+- `@<prompt>` - @ prefix queries (replaced by `shell-ai ask`)
+- `ai-copy` - Response manager (replaced by `shell-ai interactive` with `/send`)
+- `ai-pane` - Pane management (replaced by built-in tmux integration)
+- `ai-context` - Context viewer (replaced by `shell-ai ask --no-history --no-panes`)
 
 ## 🧪 Testing
 
@@ -378,13 +405,13 @@ shell-ai/
 │   │   └── response/     # Response parsing
 │   ├── scripts/          # Helper scripts
 │   └── build/            # Compiled binaries
-├── install.sh            # Bash implementation installer (Legacy)
+├── install.sh            # Legacy bash installer (deprecated - use 'make install')
 ├── Dockerfile.{bash,zsh} # Development environments
 ├── Makefile              # Docker build automation
-├── scripts/              # 📜 Bash AI integration scripts (Legacy)
-│   ├── ai-shell.sh       # Main AI integration
-│   ├── ai-setup.sh       # Provider configuration
-│   └── ai-copy.sh        # Response management
+├── scripts/              # ⚠️ Legacy bash scripts (deprecated)
+│   ├── ai-shell.sh       # Legacy AI integration
+│   ├── ai-setup.sh       # Legacy provider configuration
+│   └── ai-copy.sh        # Legacy response management
 ├── config/               # Configuration files (Shared)
 │   ├── bashrc-ai.sh      # Bash integration
 │   ├── zshrc-ai.sh       # Zsh integration
@@ -472,31 +499,55 @@ ai-setup         # Reconfigure providers
 
 ## 🔄 Migration from Bash to Go
 
-> **⚠️ IMPORTANT**: The bash implementation is deprecated. Please migrate to the Go implementation.
+> **⚠️ IMPORTANT**: The bash implementation is deprecated. Please migrate to the Go implementation.  
+> 📖 **Detailed Guide**: See [Migration Guide](docs/MIGRATION.md) for step-by-step instructions.
 
-If you're currently using the bash implementation:
+### Quick Migration Steps
 
 1. **Install Go Implementation**:
    ```bash
-   cd shell-ai/shell-ai-go
-   make build && make install
+   cd shell-ai
+   make install
+   shell-ai setup
    ```
 
-2. **Configuration Migration**:
-   - Go implementation uses YAML format instead of JSON
-   - Run `shell-ai setup` to create new configuration
-   - Your existing `~/.config/shell-ai/` directory is compatible
+2. **Update Shell Configuration**:
+   The installation automatically updates your `~/.bashrc` or `~/.zshrc` with Go implementation aliases.
+   ```bash
+   source ~/.bashrc  # or source ~/.zshrc
+   ```
 
-3. **Usage Changes**:
-   - Replace `ai "query"` with `shell-ai ask "query"`
-   - Use `shell-ai interactive` for conversational sessions
-   - tmux integration is built-in (no separate keybindings needed)
+3. **Update tmux Configuration**:
+   ```bash
+   tmux source-file ~/.tmux.conf
+   ```
 
-4. **Benefits**:
-   - Much faster startup and response times
-   - Better error handling and debugging
-   - Conversational context across multiple queries
-   - Enhanced safety analysis of commands
+### Configuration Migration
+
+- **Format Change**: Go implementation uses YAML (`config.yaml`) instead of JSON (`config.json`)
+- **Automatic Setup**: Run `shell-ai setup` to create new configuration interactively
+- **Compatible Directory**: Your existing `~/.config/shell-ai/` directory structure is compatible
+
+### Command Mapping
+
+| Bash Implementation | Go Implementation |
+|---------------------|-------------------|
+| `ai "query"` | `shell-ai ask "query"` or `ai "query"` (alias) |
+| `@query` | `shell-ai ask "query"` or `@query` (still works) |
+| `ai-copy` | `shell-ai interactive` then use `/send` command |
+| `ai-setup` | `shell-ai setup` or `ai-setup` (alias) |
+| `ai-test` | `shell-ai test` or `ai-test` (alias) |
+| `ai-pane` | Built into `shell-ai interactive` |
+| `ai-context` | `shell-ai ask --no-history --no-panes "test"` |
+
+### Benefits of Migration
+
+- ⚡ **Much faster**: ~50ms startup vs seconds for bash scripts
+- 🔄 **Conversational context**: Multi-turn conversations with full context retention
+- 🛡️ **Better safety**: Intelligent command safety analysis
+- 🎨 **Rich UI**: Syntax highlighting, colored output, interactive menus
+- 🎯 **Built-in tmux**: Visual pane selector with arrow key navigation
+- 🧪 **Well tested**: 85%+ test coverage with robust error handling
 
 ## 🤝 Contributing
 

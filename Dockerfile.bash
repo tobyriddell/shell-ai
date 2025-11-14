@@ -79,6 +79,12 @@ RUN bash -c "mkdir -p ~/.config/shell-ai ~/.local/bin"
 # Copy entire repository content
 COPY --chown=$USER:$USER . /home/shelluser/
 
+# ============================================================================
+# Go Implementation (Primary) - Build and Install
+# ============================================================================
+# The Go implementation is the primary and recommended version.
+# It provides better performance, conversational context, and enhanced features.
+
 # Build the Go implementation (shell-ai-go)
 RUN cd /home/shelluser/shell-ai-go && \
     /usr/local/go/bin/go mod download && \
@@ -96,6 +102,13 @@ RUN ln -sf /usr/local/bin/shell-ai /home/shelluser/.local/bin/shell-ai
 
 # Note: tmux-selector functionality is now built into the main shell-ai binary
 # No separate tmux-selector binary needed
+
+# ============================================================================
+# Legacy Bash Implementation (Deprecated)
+# ============================================================================
+# The bash scripts are kept for backward compatibility only.
+# They are deprecated and will not receive new features.
+# Users should migrate to the Go implementation.
 
 # Copy AI integration scripts and providers to expected location (for legacy bash support)
 # Note: These are deprecated in favor of the Go implementation
@@ -115,11 +128,18 @@ RUN cp /home/shelluser/shell-ai-go/scripts/shell-ai-copy.sh /home/shelluser/.con
 # Verify scripts were copied correctly
 RUN ls -la /home/shelluser/.config/shell-ai/
 
+# ============================================================================
+# Shell Integration Configuration
+# ============================================================================
+# Configure shell to use Go implementation as primary, with bash scripts as fallback
+
 # Add local bin to PATH and AI integration to bash
+# Note: bashrc-ai.sh has been updated to use Go implementation by default
 RUN bash -c "echo 'export PATH=\$HOME/.local/bin:\$PATH' >> ~/.bashrc" && \
     bash -c "cat ~/.config/shell-ai/bashrc-ai.sh >> ~/.bashrc"
 
-# Add Go shell-ai aliases and integration
+# Add Go shell-ai aliases and integration (Primary)
+# These aliases point to the Go implementation
 RUN bash -c "echo '' >> ~/.bashrc" && \
     bash -c "echo '# Shell AI Go Implementation (Primary)' >> ~/.bashrc" && \
     bash -c "echo 'alias ai=\"shell-ai ask\"' >> ~/.bashrc" && \
