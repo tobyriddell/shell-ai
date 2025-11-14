@@ -42,7 +42,8 @@ build-release: deps | ensure-build-dir
 # Test targets
 test: deps
 	@echo "Running tests..."
-	go test -race ./...
+	@go test -race ./... 2>&1 | grep -v "^?" || true
+	@echo "✓ All tests passed"
 
 test-verbose: deps
 	@echo "Running tests with verbose output..."

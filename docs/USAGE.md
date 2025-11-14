@@ -1,8 +1,5 @@
 # Shell AI Integration - Detailed Usage Guide
 
-> **🚀 PRIMARY**: This guide covers the **Go implementation** (recommended).  
-> **⚠️ LEGACY**: For the deprecated bash implementation, see [Legacy Bash Implementation](#legacy-bash-implementation-deprecated) section below.
-
 This guide provides comprehensive documentation for using the Shell AI Integration system.
 
 ## Table of Contents
@@ -16,8 +13,6 @@ This guide provides comprehensive documentation for using the Shell AI Integrati
 7. [API Reference](#api-reference)
 
 ## Installation
-
-### Go Implementation (Recommended)
 
 ```bash
 # Clone and install
@@ -40,14 +35,6 @@ The installation process will:
 2. Install `shell-ai` to `~/.local/bin/`
 3. Copy tmux configuration to `~/.tmux.conf`
 4. Set up shell aliases in `~/.bashrc` or `~/.zshrc`
-
-### Docker (Development)
-
-```bash
-# Build and run
-make run-bash    # or make run-zsh
-make dev-bash    # Development with project mounted
-```
 
 ## Configuration
 
@@ -334,106 +321,9 @@ ai <<< "What is the speed of light?"
 
 **Recommendation**: Use Option 2 (`setopt nonomatch`) for the best user experience, as it automatically handles the issue without requiring users to change their input habits.
 
-## Creating Custom Providers
-
-You can create custom AI providers by creating new files in the `providers/` directory.
-
-### Provider Template
-
-Create `~/.config/shell-ai/providers/custom.sh`:
-
-```bash
-#!/bin/bash
-# Custom AI Provider
-
-# Provider metadata
-PROVIDER_NAME="Custom"
-PROVIDER_DESCRIPTION="Custom AI Provider"
-
-# API call function
-call_custom() {
-    local provider_config="$1"
-    local prompt="$2"
-    
-    # Extract parameters from config
-    local api_key model endpoint
-    api_key=$(echo "$provider_config" | jq -r '.api_key')
-    model=$(echo "$provider_config" | jq -r '.model')
-    endpoint=$(echo "$provider_config" | jq -r '.endpoint // "https://api.example.com/v1/chat"')
-    
-    # Implement your API call here
-    curl -s -X POST "$endpoint" \
-        -H "Authorization: Bearer $api_key" \
-        -H "Content-Type: application/json" \
-        -d "{
-            \"model\": \"$model\",
-            \"prompt\": $(echo "$prompt" | jq -R -s .),
-            \"max_tokens\": 2000
-        }" | jq -r '.response // .error // "Error: Invalid response"'
-}
-
-# Setup function
-setup_custom() {
-    echo -e "${GREEN}Setting up Custom Provider...${NC}"
-    read -p "Enable Custom provider? (Y/n): " enable_choice
-    
-    if [[ $enable_choice =~ ^[Nn]$ ]]; then
-        jq '.providers.custom = (.providers.custom // {}) | .providers.custom.enabled = false' \
-           "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-        echo -e "${YELLOW}Custom provider disabled.${NC}"
-    else
-        read -p "Enter API key: " -s api_key
-        echo
-        read -p "Enter model: " model
-        read -p "Enter endpoint (optional): " endpoint
-        
-        if [[ -n "$endpoint" ]]; then
-            jq --arg key "$api_key" --arg model "$model" --arg endpoint "$endpoint" \
-               '.providers.custom = {"api_key": $key, "model": $model, "endpoint": $endpoint, "enabled": true}' \
-               "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-        else
-            jq --arg key "$api_key" --arg model "$model" \
-               '.providers.custom = {"api_key": $key, "model": $model, "enabled": true}' \
-               "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-        fi
-        
-        echo -e "${GREEN}Custom provider configured!${NC}"
-    fi
-}
-```
-
-### Required Functions
-
-Every provider must implement:
-- `call_<provider>(provider_config, prompt)`: Handle API calls with standardized interface
-- `setup_<provider>()`: Handle configuration
-- `PROVIDER_NAME` and `PROVIDER_DESCRIPTION` variables
-
-**Provider Interface:**
-- `provider_config`: JSON object containing all provider configuration
-- `prompt`: The user's prompt/question
-- Each provider extracts what it needs from the config (api_key, model, host, etc.)
-
-### Environment-Specific Deployments
-
-For different environments:
-1. Include only the needed provider files
-2. The system automatically adapts to available providers
-3. No changes needed in main scripts
-
-Example for a minimal environment:
-```bash
-# Only include custom provider
-rm ~/.config/shell-ai/providers/openai.sh
-rm ~/.config/shell-ai/providers/anthropic.sh
-rm ~/.config/shell-ai/providers/google.sh
-rm ~/.config/shell-ai/providers/ollama.sh
-# Keep only custom.sh
-```
-
 ## API Reference
 
-### Go Implementation Commands
+### Commands
 
 ```bash
 # Main commands
@@ -468,39 +358,3 @@ When in `shell-ai interactive` mode:
 - `/clear` - Clear conversation history
 - `/help` - Show help
 - `Ctrl-D` - Exit
-
----
-
-## Legacy Bash Implementation (Deprecated)
-
-> **⚠️ DEPRECATED**: The bash implementation is no longer recommended.  
-> **🚀 MIGRATE**: Use the Go implementation above for the best experience.
-
-### Installation
-
-```bash
-git clone <repository-url>
-cd shell-ai
-chmod +x install.sh
-./install.sh
-```
-
-### Usage
-
-```bash
-# @ prefix queries
-@what does ps aux do
-
-# Direct commands
-ai "explain the ls command"
-ai-setup
-ai-copy
-ai-test
-```
-
-### Configuration
-
-Edit `~/.config/shell-ai/config.json` (JSON format, not YAML).
-
-For more details on the legacy bash implementation, see the [Migration Guide](../README.md#-migration-from-bash-to-go).
-``` 
