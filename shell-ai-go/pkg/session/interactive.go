@@ -54,7 +54,7 @@ func NewInteractiveSession(cfg *config.Config, tmuxClient *tmux.Client) *Interac
 		prompt:    lipgloss.NewStyle().Foreground(lipgloss.Color("12")).Bold(true), // Bright blue
 		user:      lipgloss.NewStyle().Foreground(lipgloss.Color("10")),            // Bright green
 		assistant: lipgloss.NewStyle().Foreground(lipgloss.Color("14")),            // Bright cyan
-		system:    lipgloss.NewStyle().Foreground(lipgloss.Color("8")),             // Gray
+		system:    lipgloss.NewStyle().Foreground(lipgloss.Color("7")),             // Light gray (bright)
 		error:     lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Bold(true),  // Bright red
 		warning:   lipgloss.NewStyle().Foreground(lipgloss.Color("11")),            // Bright yellow
 		success:   lipgloss.NewStyle().Foreground(lipgloss.Color("10")),            // Bright green

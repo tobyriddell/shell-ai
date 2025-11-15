@@ -74,7 +74,7 @@ providers:
   google:
     enabled: false
     api_key: "AIza..."
-    model: "gemini-1.5-flash"
+    model: "gemini-2.5-pro"
     max_tokens: 2000
     temperature: 0.7
 

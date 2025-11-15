@@ -30,7 +30,7 @@ func NewOneShot(cfg *config.Config, tmuxClient *tmux.Client) *OneShot {
 		prompt:    lipgloss.NewStyle().Foreground(lipgloss.Color("12")).Bold(true),
 		user:      lipgloss.NewStyle().Foreground(lipgloss.Color("10")),
 		assistant: lipgloss.NewStyle().Foreground(lipgloss.Color("14")),
-		system:    lipgloss.NewStyle().Foreground(lipgloss.Color("8")),
+		system:    lipgloss.NewStyle().Foreground(lipgloss.Color("7")), // Light gray (bright)
 		error:     lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Bold(true),
 		warning:   lipgloss.NewStyle().Foreground(lipgloss.Color("11")),
 		success:   lipgloss.NewStyle().Foreground(lipgloss.Color("10")),
