@@ -26,7 +26,7 @@ func NewGoogleProvider(config *ai.ProviderConfig) *GoogleProvider {
 		config.Temperature = 0.7
 	}
 	if config.Model == "" {
-		config.Model = "gemini-1.5-flash"
+		config.Model = "gemini-2.5-pro"
 	}
 	if config.BaseURL == "" {
 		config.BaseURL = "https://generativelanguage.googleapis.com/v1beta"
@@ -234,11 +234,11 @@ func (p *GoogleProvider) Setup() error {
 		return fmt.Errorf("API key cannot be empty")
 	}
 
-	fmt.Print("Enter model (default: gemini-1.5-flash): ")
+	fmt.Print("Enter model (default: gemini-2.5-pro): ")
 	var model string
 	fmt.Scanln(&model)
 	if model == "" {
-		model = "gemini-1.5-flash"
+		model = "gemini-2.5-pro"
 	}
 
 	fmt.Print("Enable provider? [Y/n]: ")

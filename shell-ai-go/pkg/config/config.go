@@ -205,7 +205,7 @@ func LoadConfig() (*Config, error) {
 		config.Providers["google"] = &ai.ProviderConfig{
 			Name:        "google",
 			Enabled:     false,
-			Model:       "gemini-1.5-flash",
+			Model:       "gemini-2.5-pro",
 			MaxTokens:   2000,
 			Temperature: 0.7,
 		}
@@ -263,7 +263,7 @@ func NewDefaultConfig() *Config {
 			"google": {
 				Name:        "google",
 				Enabled:     false,
-				Model:       "gemini-1.5-flash",
+				Model:       "gemini-2.5-pro",
 				MaxTokens:   2000,
 				Temperature: 0.7,
 			},
