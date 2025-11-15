@@ -23,12 +23,17 @@ install: build ## Install shell-ai binary and configuration
 	@cp shell-ai-go/build/shell-ai ~/.local/bin/shell-ai
 	@chmod +x ~/.local/bin/shell-ai
 	@echo "✓ Installed shell-ai binary to ~/.local/bin/"
-	@if [ -f ~/.tmux.conf ]; then \
-		echo "⚠️  ~/.tmux.conf already exists. Backing up to ~/.tmux.conf.backup"; \
-		cp ~/.tmux.conf ~/.tmux.conf.backup; \
+	@if [ -f scripts/install-tmux-config.sh ]; then \
+		bash scripts/install-tmux-config.sh; \
+	else \
+		echo "⚠️  install-tmux-config.sh not found, using simple copy"; \
+		if [ -f ~/.tmux.conf ]; then \
+			echo "⚠️  ~/.tmux.conf already exists. Backing up to ~/.tmux.conf.backup"; \
+			cp ~/.tmux.conf ~/.tmux.conf.backup; \
+		fi; \
+		cp config/tmux.conf ~/.tmux.conf; \
+		echo "✓ Installed tmux configuration to ~/.tmux.conf"; \
 	fi
-	@cp config/tmux.conf ~/.tmux.conf
-	@echo "✓ Installed tmux configuration to ~/.tmux.conf"
 	@echo ""
 	@echo "Next steps:"
 	@echo "1. Add ~/.local/bin to your PATH (if not already):"
@@ -45,12 +50,17 @@ install-system: build ## Install shell-ai binary system-wide (requires sudo)
 	@sudo cp shell-ai-go/build/shell-ai /usr/local/bin/shell-ai
 	@sudo chmod +x /usr/local/bin/shell-ai
 	@echo "✓ Installed shell-ai binary to /usr/local/bin/"
-	@if [ -f ~/.tmux.conf ]; then \
-		echo "⚠️  ~/.tmux.conf already exists. Backing up to ~/.tmux.conf.backup"; \
-		cp ~/.tmux.conf ~/.tmux.conf.backup; \
+	@if [ -f scripts/install-tmux-config.sh ]; then \
+		bash scripts/install-tmux-config.sh; \
+	else \
+		echo "⚠️  install-tmux-config.sh not found, using simple copy"; \
+		if [ -f ~/.tmux.conf ]; then \
+			echo "⚠️  ~/.tmux.conf already exists. Backing up to ~/.tmux.conf.backup"; \
+			cp ~/.tmux.conf ~/.tmux.conf.backup; \
+		fi; \
+		cp config/tmux.conf ~/.tmux.conf; \
+		echo "✓ Installed tmux configuration to ~/.tmux.conf"; \
 	fi
-	@cp config/tmux.conf ~/.tmux.conf
-	@echo "✓ Installed tmux configuration to ~/.tmux.conf"
 	@echo ""
 	@echo "Next steps:"
 	@echo "1. Configure AI providers: shell-ai setup"
