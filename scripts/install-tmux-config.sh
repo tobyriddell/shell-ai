@@ -4,9 +4,11 @@
 set -e
 
 TMUX_CONF="$HOME/.tmux.conf"
-SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-TMUX_CONF_SOURCE="$SCRIPT_DIR/config/tmux.conf"
 TMUX_CONF_BACKUP="$HOME/.tmux.conf.backup"
+
+# Determine repository root: script is in scripts/, so go up one level
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+TMUX_CONF_SOURCE="$REPO_ROOT/config/tmux.conf"
 
 # Check if source file exists
 if [ ! -f "$TMUX_CONF_SOURCE" ]; then
