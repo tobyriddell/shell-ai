@@ -55,6 +55,11 @@ func (o *OneShot) Ask(prompt string) error {
 		true,                    // include history
 		o.tmuxClient.IsInTmux(), // include panes if in tmux
 	)
+	// Set pane limits for context gathering
+	o.contextGatherer.SetPaneLimits(
+		o.config.Settings.MaxPaneLines,
+		o.config.Settings.MaxPaneContextSize,
+	)
 
 	// Show AI provider
 	fmt.Print(o.styles.system.Render("🤖 Asking "))

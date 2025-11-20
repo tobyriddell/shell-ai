@@ -22,14 +22,15 @@ type Config struct {
 
 // Settings contains application settings
 type Settings struct {
-	AutoCopy        bool   `yaml:"auto_copy"`
-	AutoCopyPrompt  bool   `yaml:"auto_copy_prompt"`
-	DefaultProvider string `yaml:"default_provider"`
-	MaxHistoryLines int    `yaml:"max_history_lines"`
-	MaxPaneLines    int    `yaml:"max_pane_lines"`
-	ConversationTTL int    `yaml:"conversation_ttl_hours"`
-	EnableStorage   bool   `yaml:"enable_storage"`
-	SharedStorage   bool   `yaml:"shared_storage"`
+	AutoCopy           bool   `yaml:"auto_copy"`
+	AutoCopyPrompt     bool   `yaml:"auto_copy_prompt"`
+	DefaultProvider    string `yaml:"default_provider"`
+	MaxHistoryLines    int    `yaml:"max_history_lines"`
+	MaxPaneLines       int    `yaml:"max_pane_lines"`
+	MaxPaneContextSize int    `yaml:"max_pane_context_size"` // Max total size (bytes) for all pane content
+	ConversationTTL    int    `yaml:"conversation_ttl_hours"`
+	EnableStorage      bool   `yaml:"enable_storage"`
+	SharedStorage      bool   `yaml:"shared_storage"`
 
 	// Context management settings
 	MaxTokens           int    `yaml:"max_tokens"`
@@ -74,6 +75,7 @@ func InitConfig(cfgFile string) {
 	viper.SetDefault("settings.auto_copy_prompt", true)
 	viper.SetDefault("settings.max_history_lines", 50)
 	viper.SetDefault("settings.max_pane_lines", 100)
+	viper.SetDefault("settings.max_pane_context_size", 20000) // 20KB default for all pane content
 	viper.SetDefault("settings.conversation_ttl_hours", 24)
 	viper.SetDefault("settings.enable_storage", true)
 	viper.SetDefault("settings.shared_storage", true)
@@ -127,6 +129,12 @@ func LoadConfig() (*Config, error) {
 			}
 			if maxHistoryLines, ok := settingsMap["max_history_lines"].(int); ok && maxHistoryLines > 0 {
 				config.Settings.MaxHistoryLines = maxHistoryLines
+			}
+			if maxPaneLines, ok := settingsMap["max_pane_lines"].(int); ok && maxPaneLines > 0 {
+				config.Settings.MaxPaneLines = maxPaneLines
+			}
+			if maxPaneContextSize, ok := settingsMap["max_pane_context_size"].(int); ok && maxPaneContextSize > 0 {
+				config.Settings.MaxPaneContextSize = maxPaneContextSize
 			}
 			if maxContextSize, ok := settingsMap["max_context_size"].(int); ok && maxContextSize > 0 {
 				config.Settings.MaxContextSize = maxContextSize
@@ -287,6 +295,7 @@ func NewDefaultSettings() *Settings {
 		AutoCopyPrompt:      true,
 		MaxHistoryLines:     50,
 		MaxPaneLines:        100,
+		MaxPaneContextSize:  20000,
 		ConversationTTL:     24,
 		MaxTokens:           8000,
 		MaxMessages:         20,
