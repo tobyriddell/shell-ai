@@ -117,11 +117,16 @@ func (s *InteractiveSession) Run() error {
 	s.printWelcome()
 
 	// Setup context gatherer options
-	s.contextGatherer.SetOptions(
-		s.config.Settings.MaxHistoryLines,
-		true,                    // include history
-		s.tmuxClient.IsInTmux(), // include panes if in tmux
-	)
+		s.contextGatherer.SetOptions(
+			s.config.Settings.MaxHistoryLines,
+			true,                    // include history
+			s.tmuxClient.IsInTmux(), // include panes if in tmux
+		)
+		// Set pane limits for context gathering
+		s.contextGatherer.SetPaneLimits(
+			s.config.Settings.MaxPaneLines,
+			s.config.Settings.MaxPaneContextSize,
+		)
 
 	// Perform cleanup of old conversations
 	if err := s.contextManager.PerformCleanup(); err != nil {
@@ -685,11 +690,16 @@ func (s *InteractiveSession) RunWithInitialQuestion(initialQuestion string) erro
 	s.printWelcome()
 
 	// Setup context gatherer options
-	s.contextGatherer.SetOptions(
-		s.config.Settings.MaxHistoryLines,
-		true,                    // include history
-		s.tmuxClient.IsInTmux(), // include panes if in tmux
-	)
+		s.contextGatherer.SetOptions(
+			s.config.Settings.MaxHistoryLines,
+			true,                    // include history
+			s.tmuxClient.IsInTmux(), // include panes if in tmux
+		)
+		// Set pane limits for context gathering
+		s.contextGatherer.SetPaneLimits(
+			s.config.Settings.MaxPaneLines,
+			s.config.Settings.MaxPaneContextSize,
+		)
 
 	// Perform cleanup of old conversations
 	if err := s.contextManager.PerformCleanup(); err != nil {

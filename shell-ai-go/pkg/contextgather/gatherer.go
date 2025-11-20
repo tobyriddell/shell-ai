@@ -17,10 +17,12 @@ import (
 
 // Gatherer collects context information for AI requests
 type Gatherer struct {
-	tmuxClient     *tmux.Client
-	maxHistLines   int
-	includeHistory bool
-	includePanes   bool
+	tmuxClient         *tmux.Client
+	maxHistLines       int
+	maxPaneLines       int
+	maxPaneContextSize int
+	includeHistory     bool
+	includePanes       bool
 }
 
 // NewGatherer creates a new context gatherer
@@ -38,6 +40,12 @@ func (g *Gatherer) SetOptions(maxHistLines int, includeHistory, includePanes boo
 	g.maxHistLines = maxHistLines
 	g.includeHistory = includeHistory
 	g.includePanes = includePanes
+}
+
+// SetPaneLimits sets limits for pane content gathering
+func (g *Gatherer) SetPaneLimits(maxPaneLines, maxPaneContextSize int) {
+	g.maxPaneLines = maxPaneLines
+	g.maxPaneContextSize = maxPaneContextSize
 }
 
 // GatherContext collects all context information
@@ -71,7 +79,8 @@ func (g *Gatherer) GatherContext() (*ai.ContextData, error) {
 
 	// Tmux pane content
 	if g.includePanes && g.tmuxClient.IsInTmux() {
-		paneContent, err := g.tmuxClient.CapturePaneContent()
+		// Use configured limits for pane content
+		paneContent, err := g.tmuxClient.CapturePaneContentWithLimits(g.maxPaneLines, g.maxPaneContextSize)
 		if err == nil {
 			context.TmuxContent = paneContent
 		}

@@ -171,10 +171,31 @@ func (c *Client) SendCommandsToPane(paneID string, commands []ai.Command) error 
 	return nil
 }
 
-// CapturePaneContent captures content from all panes
+// CapturePaneContent captures content from all panes with prioritization and size limits
 func (c *Client) CapturePaneContent() ([]ai.PaneContent, error) {
+	return c.CapturePaneContentWithLimits(0, 0)
+}
+
+// CapturePaneContentWithLimits captures content from panes with size limits and window prioritization
+// maxPaneLines: maximum lines per pane (0 = no limit)
+// maxTotalSize: maximum total size in bytes for all pane content (0 = no limit)
+func (c *Client) CapturePaneContentWithLimits(maxPaneLines, maxTotalSize int) ([]ai.PaneContent, error) {
 	if !c.inTmux {
 		return nil, fmt.Errorf("not running in tmux")
+	}
+
+	// Get current window index
+	currentPaneID, err := c.GetCurrentPaneID()
+	if err != nil {
+		return nil, err
+	}
+
+	// Extract window index from current pane ID (format: session:window.pane)
+	currentWindowIndex := ""
+	if parts := strings.Split(currentPaneID, ":"); len(parts) > 1 {
+		if windowParts := strings.Split(parts[1], "."); len(windowParts) > 0 {
+			currentWindowIndex = windowParts[0]
+		}
 	}
 
 	panes, err := c.GetPanes()
@@ -182,23 +203,89 @@ func (c *Client) CapturePaneContent() ([]ai.PaneContent, error) {
 		return nil, err
 	}
 
-	var content []ai.PaneContent
+	// Separate panes by window: current window first, then others
+	var currentWindowPanes []TmuxPane
+	var otherWindowPanes []TmuxPane
 
 	for _, pane := range panes {
+		if pane.WindowIndex == currentWindowIndex {
+			currentWindowPanes = append(currentWindowPanes, pane)
+		} else {
+			otherWindowPanes = append(otherWindowPanes, pane)
+		}
+	}
+
+	// Process panes: current window first, then others
+	var content []ai.PaneContent
+	totalSize := 0
+
+	// Helper function to capture and add pane content
+	capturePane := func(pane TmuxPane) bool {
 		cmd := exec.Command("tmux", "capture-pane", "-t", pane.FullID, "-p")
 		output, err := cmd.Output()
 		if err != nil {
 			// Skip panes we can't capture
-			continue
+			return false
+		}
+
+		paneContent := string(output)
+
+		// Apply per-pane line limit
+		if maxPaneLines > 0 {
+			lines := strings.Split(paneContent, "\n")
+			if len(lines) > maxPaneLines {
+				// Keep last N lines
+				lines = lines[len(lines)-maxPaneLines:]
+				paneContent = strings.Join(lines, "\n")
+			}
+		}
+
+		// Check total size limit
+		paneSize := len(paneContent)
+		if maxTotalSize > 0 && totalSize+paneSize > maxTotalSize {
+			// Truncate this pane's content to fit within remaining limit
+			remaining := maxTotalSize - totalSize
+			if remaining > 0 {
+				// Keep last N bytes
+				if len(paneContent) > remaining {
+					paneContent = paneContent[len(paneContent)-remaining:]
+				}
+			} else {
+				// No space left, skip this pane
+				return false
+			}
 		}
 
 		content = append(content, ai.PaneContent{
 			PaneID:   pane.FullID,
 			Title:    pane.PaneTitle,
-			Content:  string(output),
+			Content:  paneContent,
 			IsActive: pane.IsActive,
 			LastUsed: int64(pane.LastUsed),
 		})
+
+		totalSize += len(paneContent)
+		return true
+	}
+
+	// Process current window panes first (prioritized)
+	for _, pane := range currentWindowPanes {
+		if !capturePane(pane) {
+			break // Stop if we hit size limit
+		}
+		if maxTotalSize > 0 && totalSize >= maxTotalSize {
+			break
+		}
+	}
+
+	// Process other window panes (if space allows)
+	for _, pane := range otherWindowPanes {
+		if !capturePane(pane) {
+			break // Stop if we hit size limit
+		}
+		if maxTotalSize > 0 && totalSize >= maxTotalSize {
+			break
+		}
 	}
 
 	return content, nil
