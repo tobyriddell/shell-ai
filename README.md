@@ -21,7 +21,7 @@ An AI-enhanced shell environment that seamlessly integrates multiple AI provider
 - **tmux Integration**: Seamless pane selection and command distribution
 - **🧪 Comprehensive Testing**: 85%+ test coverage with robust error handling
 
-## 📋 Installation & Quick Start
+## 📋 Installation
 
 ### Prerequisites
 - Go 1.21 or later
@@ -59,8 +59,6 @@ shell-ai setup
 
 ### Manual Installation
 
-If you prefer manual installation:
-
 ```bash
 # Build the binary
 cd shell-ai-go
@@ -77,26 +75,47 @@ cp ../config/tmux.conf ~/.tmux.conf
 shell-ai setup
 ```
 
-### Usage
+## 💡 Usage
 
-**Interactive Session (Recommended)**:
+### Interactive Session (Recommended)
+
 ```bash
 shell-ai interactive
 # Or just: shell-ai
 ```
 
-**One-shot Queries**:
+In interactive mode:
+- Type your questions naturally
+- Use `/send` to send commands to tmux panes
+- Use `/context` to view current context
+- Use `/clear` to clear conversation history
+- Use `/help` for available commands
+- Press `Ctrl-D` to exit
+
+### One-shot Queries
+
 ```bash
 shell-ai ask "how do I find large files?"
 shell-ai ask --provider openai "explain this error"
+shell-ai ask --no-history "what is tmux?"  # Exclude shell history
+shell-ai ask --no-panes "query"            # Exclude tmux content
 ```
 
-**Available Commands**:
+### Helper Functions
+
+```bash
+ai-last    # Explain last command
+ai-here    # Ask about current directory
+ai-fix     # Fix last failed command
+```
+
+### Commands & Aliases
+
+**Main Commands:**
 - `shell-ai interactive` - Start conversational session
 - `shell-ai ask <prompt>` - Single question
 - `shell-ai setup` - Configure providers
 - `shell-ai test` - Test provider connections
-- Use `Ctrl-D` to exit interactive sessions
 
 **Shell Aliases** (automatically configured):
 - `ai` → `shell-ai ask`
@@ -111,12 +130,25 @@ shell-ai ask --provider openai "explain this error"
 - `Ctrl-A + T` - Test AI providers
 - `Ctrl-A + E` - Explain current pane output
 - `Ctrl-A + X` - Show AI context
+- `Ctrl-A + C` - AI copy manager (interactive mode)
 
 ## 🔧 Configuration
 
-### AI Provider Configuration
+### Interactive Setup
 
-The Go version uses YAML configuration in `~/.config/shell-ai/config.yaml`:
+```bash
+shell-ai setup
+```
+
+This guides you through:
+1. Selecting AI providers to enable
+2. Entering API keys securely
+3. Configuring model preferences
+4. Setting up context and conversation settings
+
+### Configuration File
+
+Configuration is stored in `~/.config/shell-ai/config.yaml`:
 
 ```yaml
 providers:
@@ -152,46 +184,85 @@ settings:
   auto_copy: false
   auto_copy_prompt: true
   max_history_lines: 50
-  max_pane_lines: 100
+  max_pane_lines: 100              # Maximum lines captured per tmux pane
+  max_pane_context_size: 20000     # Maximum total size (bytes) for all pane content combined
   conversation_ttl_hours: 24
 ```
 
-Use `shell-ai setup` for interactive configuration.
+**Context Size Settings:**
+- `max_pane_lines`: Maximum number of lines captured from each tmux pane (default: 100). Applied per pane before the total size limit.
+- `max_pane_context_size`: Maximum total size in bytes for all tmux pane content combined (default: 20000 = 20KB). Panes from the current window are prioritized over panes from other windows.
 
-## 💡 Usage Examples
-
-### Interactive Session
-
+**Secure Configuration:**
 ```bash
-# Start conversational session
+chmod 600 ~/.config/shell-ai/config.yaml
+```
+
+## 🎯 Advanced Features
+
+### Response Management
+
+In interactive mode, use the `/send` command to send AI-generated commands to tmux panes:
+```bash
 shell-ai interactive
-
-# In interactive mode:
 🤖 AI> How do I find large files?
-# AI responds with commands and explanations
-
-🤖 AI> /send  # Send last commands to tmux pane
-🤖 AI> /context  # Show current context
-🤖 AI> /clear  # Clear conversation
-🤖 AI> /help  # Show help
-🤖 AI> Ctrl-D  # Exit
+# AI responds with: find . -type f -size +100M
+🤖 AI> /send
+# Select target pane, then confirm execution
 ```
 
-### One-shot Queries
+### Context Management
+
+The AI automatically receives:
+- System information
+- Shell history (via atuin if available)
+- Current tmux pane content (prioritized by window)
+- Working directory and file listings
+- Previous conversation context
+
+### Conversation Context
+
+The Go implementation maintains conversation context across multiple queries:
+- Context is automatically included in follow-up questions
+- Context expires after 24 hours (configurable via `conversation_ttl_hours`)
+- Use `/clear` in interactive mode to reset context
+
+## 🐛 Troubleshooting
+
+### Common Issues
 
 ```bash
-shell-ai ask "explain the ps command"
-shell-ai ask --provider openai "fix this error: permission denied"
-shell-ai ask --no-history "what is tmux?"
+# Commands not found
+source ~/.bashrc  # or ~/.zshrc
+export PATH="$HOME/.local/bin:$PATH"
+
+# AI not responding
+shell-ai test
+shell-ai setup
+
+# tmux issues
+tmux source-file ~/.tmux.conf
+
+# Check configuration
+cat ~/.config/shell-ai/config.yaml
+
+# Build issues
+cd shell-ai-go && make clean && make build
 ```
 
-### tmux Integration
+### zsh Globbing Issues
 
-The Go implementation includes built-in pane selection:
-- Automatically detects tmux environment
-- Visual pane selector with arrow key navigation
-- Safe command execution with confirmation
-- Context includes all pane content
+**Problem**: In zsh, special characters like `?` and `*` in prompts can cause globbing errors.
+
+**Solution** (Recommended): Add to `~/.zshrc` or `~/.config/shell-ai/zshrc-ai.sh`:
+```bash
+setopt nonomatch  # Prevent zsh from failing on unmatched glob patterns
+```
+
+**Alternative**: Quote prompts containing special characters:
+```bash
+ai "What is the speed of light?"
+```
 
 ## 🧪 Testing
 
@@ -206,12 +277,6 @@ make test-verbose
 
 # Coverage report
 make test-coverage
-
-# Run specific packages
-go test ./pkg/ai ./pkg/tmux
-
-# Build and test
-make build && ./build/shell-ai --help
 ```
 
 ## 📁 Project Structure
@@ -255,25 +320,6 @@ brew install go tmux
 curl --proto '=https' --tlsv1.2 -sSf https://setup.atuin.sh | sh
 ```
 
-## 🐛 Troubleshooting
-
-```bash
-# Test providers
-shell-ai test
-
-# Check configuration
-shell-ai setup
-
-# Show context
-shell-ai ask --no-history --no-panes "test"
-
-# Build issues
-cd shell-ai-go && make clean && make build
-
-# Debug with verbose output
-make test-verbose
-```
-
 ## 🤝 Contributing
 
 1. Fork repository
@@ -288,15 +334,6 @@ make test-verbose
 ## 📄 License
 
 MIT License - see LICENSE file for details.
-
-## 🚀 Roadmap
-
-- [ ] **Streaming Responses**: Real-time AI response streaming
-- [ ] **Additional Providers**: Enhanced Anthropic, Google, Ollama implementations  
-- [ ] **Plugin System**: Custom provider plugins
-- [ ] **History Search**: Semantic conversation search
-- [ ] **Web UI**: Browser-based interface
-- [ ] **Team Features**: Shared conversation contexts
 
 ## 🔗 Related Projects
 
