@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -138,9 +139,13 @@ func (s *InteractiveSession) Run() error {
 		var input string
 		var err error
 
+		// Build prompt with context usage indicator
+		prompt := s.buildPrompt()
+
 		// Check if readline is available
 		if s.readlineManager != nil {
 			// Use readline for input with history and editing
+			s.readlineManager.SetPrompt(prompt)
 			input, err = s.readlineManager.ReadLine()
 			if err != nil {
 				if err == readline.ErrInterrupt {
@@ -156,7 +161,7 @@ func (s *InteractiveSession) Run() error {
 			}
 		} else {
 			// Fallback to basic input if readline failed to initialize
-			fmt.Print(s.styles.prompt.Render("🤖 AI> "))
+			fmt.Print(s.styles.prompt.Render(prompt))
 
 			// Create channels for concurrent input and signal handling
 			inputChan := make(chan string, 1)
@@ -238,6 +243,8 @@ func (s *InteractiveSession) printWelcome() {
 	fmt.Println(s.styles.system.Render("  /load     - Load a conversation by ID"))
 	fmt.Println(s.styles.system.Render("  /delete   - Delete a conversation"))
 	fmt.Println(s.styles.system.Render("  /stats    - Show context usage statistics"))
+	fmt.Println(s.styles.system.Render("  /context-usage - Show current context usage"))
+	fmt.Println(s.styles.system.Render("  /context-max <size> - Set maximum context size (bytes, KB, MB)"))
 	fmt.Println(s.styles.system.Render("  /send     - Send last response to tmux pane"))
 	fmt.Println(s.styles.system.Render("  /quit     - Exit session"))
 	fmt.Println(s.styles.system.Render("  Ctrl-D    - Exit session"))
@@ -270,6 +277,9 @@ func (s *InteractiveSession) handleSpecialCommands(input string) bool {
 	case "/stats":
 		s.showContextStats()
 		return true
+	case "/context-usage", "/ctx-usage", "/ctxusage":
+		s.showContextUsageSummary()
+		return true
 	case "/send", "/s":
 		s.sendToPane()
 		return true
@@ -286,6 +296,9 @@ func (s *InteractiveSession) handleSpecialCommands(input string) bool {
 			return true
 		} else if strings.HasPrefix(input, "/delete ") {
 			s.deleteConversation(strings.TrimSpace(input[8:]))
+			return true
+		} else if strings.HasPrefix(strings.ToLower(input), "/context-max ") {
+			s.setMaxContextSize(strings.TrimSpace(input[len("/context-max "):]))
 			return true
 		}
 		return false
@@ -367,6 +380,8 @@ func (s *InteractiveSession) showHelp() {
 	fmt.Println(s.styles.system.Render("  /load <id>         - Load a conversation by ID"))
 	fmt.Println(s.styles.system.Render("  /delete <id>       - Delete a conversation"))
 	fmt.Println(s.styles.system.Render("  /stats             - Show context usage statistics"))
+	fmt.Println(s.styles.system.Render("  /context-usage     - Show current context usage"))
+	fmt.Println(s.styles.system.Render("  /context-max <size>- Set maximum context size (bytes, KB, MB)"))
 	fmt.Println(s.styles.system.Render("  /send              - Send last commands to tmux pane"))
 	fmt.Println(s.styles.system.Render("  /provider <name>   - Switch AI provider"))
 	fmt.Println(s.styles.system.Render("  /quit              - Exit session"))
@@ -583,6 +598,158 @@ func (s *InteractiveSession) showContextStats() {
 	}
 
 	fmt.Println()
+}
+
+// showContextUsageSummary displays a concise view of context usage
+func (s *InteractiveSession) showContextUsageSummary() {
+	stats := s.getContextStats()
+
+	fmt.Println(s.styles.system.Render("Context Usage"))
+	fmt.Println(s.styles.system.Render("=============="))
+
+	if stats.MaxContextSize <= 0 {
+		fmt.Println(s.styles.warning.Render("Context usage information is not available (max size is zero)."))
+		return
+	}
+
+	indicator := s.buildContextUsageIndicator(stats)
+	usagePercent := s.calculateUsagePercent(stats)
+
+	fmt.Printf("%s  %s/%s (%.0f%%)\n",
+		s.styles.command.Render(indicator),
+		contextmgmt.FormatSize(stats.ContextSize),
+		contextmgmt.FormatSize(stats.MaxContextSize),
+		usagePercent)
+
+	if stats.TruncationNeeded {
+		fmt.Println(s.styles.warning.Render("⚠️  Context exceeds current limit"))
+	} else {
+		fmt.Println(s.styles.success.Render("✅ Context within limit"))
+	}
+
+	fmt.Println()
+}
+
+// setMaxContextSize updates the maximum context size setting
+func (s *InteractiveSession) setMaxContextSize(value string) {
+	if strings.TrimSpace(value) == "" {
+		fmt.Println(s.styles.error.Render("Usage: /context-max <bytes|KB|MB>"))
+		return
+	}
+
+	bytes, err := parseSizeString(value)
+	if err != nil {
+		fmt.Println(s.styles.error.Render(fmt.Sprintf("Invalid size: %v", err)))
+		return
+	}
+
+	if bytes <= 0 {
+		fmt.Println(s.styles.error.Render("Context size must be greater than zero."))
+		return
+	}
+
+	s.config.Settings.MaxContextSize = bytes
+	if err := config.SaveConfig(s.config); err != nil {
+		fmt.Println(s.styles.error.Render(fmt.Sprintf("Failed to save config: %v", err)))
+		return
+	}
+
+	// Update manager limits immediately
+	s.contextManager.UpdateLimits(s.config.CreateContextLimits())
+
+	fmt.Println(s.styles.success.Render(
+		fmt.Sprintf("Max context size set to %s", contextmgmt.FormatSize(bytes)),
+	))
+}
+
+// buildPrompt constructs the dynamic prompt with context usage indicator
+func (s *InteractiveSession) buildPrompt() string {
+	stats := s.getContextStats()
+	indicator := s.buildContextUsageIndicator(stats)
+
+	if indicator == "" {
+		return "🤖 AI> "
+	}
+
+	return fmt.Sprintf("%s 🤖 AI> ", indicator)
+}
+
+// getContextStats retrieves context stats for the current conversation
+func (s *InteractiveSession) getContextStats() contextmgmt.ContextStats {
+	conversation := s.aiManager.GetOrCreateConversation(s.conversationID)
+	return s.contextManager.GetContextStats(conversation)
+}
+
+// buildContextUsageIndicator generates a bar indicator for context usage
+func (s *InteractiveSession) buildContextUsageIndicator(stats contextmgmt.ContextStats) string {
+	if stats.MaxContextSize <= 0 {
+		return ""
+	}
+
+	usagePercent := s.calculateUsagePercent(stats)
+	if usagePercent < 0 {
+		usagePercent = 0
+	}
+
+	if usagePercent > 100 {
+		usagePercent = 100
+	}
+
+	const barWidth = 10
+	filledBars := int((usagePercent / 100) * barWidth)
+	if filledBars > barWidth {
+		filledBars = barWidth
+	}
+
+	bar := strings.Repeat("█", filledBars) + strings.Repeat("░", barWidth-filledBars)
+	return fmt.Sprintf("[%s] %3.0f%%", bar, usagePercent)
+}
+
+// calculateUsagePercent calculates usage percentage for context stats
+func (s *InteractiveSession) calculateUsagePercent(stats contextmgmt.ContextStats) float64 {
+	if stats.MaxContextSize <= 0 {
+		return 0
+	}
+
+	return (float64(stats.ContextSize) / float64(stats.MaxContextSize)) * 100
+}
+
+// parseSizeString parses size strings like "50k", "20MB", etc.
+func parseSizeString(value string) (int, error) {
+	value = strings.TrimSpace(strings.ToLower(value))
+	if value == "" {
+		return 0, fmt.Errorf("empty size")
+	}
+
+	multipliers := map[string]int{
+		"kb": 1024,
+		"k":  1024,
+		"mb": 1024 * 1024,
+		"m":  1024 * 1024,
+		"gb": 1024 * 1024 * 1024,
+		"g":  1024 * 1024 * 1024,
+	}
+
+	multiplier := 1
+	for suffix, mult := range multipliers {
+		if strings.HasSuffix(value, suffix) {
+			value = strings.TrimSpace(strings.TrimSuffix(value, suffix))
+			multiplier = mult
+			break
+		}
+	}
+
+	number, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	bytes := int(number * float64(multiplier))
+	if bytes <= 0 {
+		return 0, fmt.Errorf("size must be greater than zero")
+	}
+
+	return bytes, nil
 }
 
 // clearConversation clears the current conversation
