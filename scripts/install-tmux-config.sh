@@ -7,6 +7,7 @@ TMUX_CONF="$HOME/.tmux.conf"
 TMUX_CONF_BACKUP="$HOME/.tmux.conf.backup"
 
 # Determine repository root: script is in scripts/, so go up one level
+unset CDPATH
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TMUX_CONF_SOURCE="$REPO_ROOT/config/tmux.conf"
 
