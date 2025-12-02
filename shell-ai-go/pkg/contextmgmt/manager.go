@@ -1,6 +1,7 @@
 package contextmgmt
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -23,6 +24,14 @@ func NewManager(limits *ContextLimits, storage storage.Storage) *Manager {
 		storage:       storage,
 		cleanupPeriod: 24 * time.Hour, // Cleanup every 24 hours
 	}
+}
+
+// UpdateLimits replaces the current context limits at runtime
+func (m *Manager) UpdateLimits(limits *ContextLimits) {
+	if limits == nil {
+		return
+	}
+	m.limits = limits
 }
 
 // ProcessConversation processes a conversation with context limits
@@ -105,7 +114,7 @@ func (m *Manager) PerformCleanup() error {
 
 	// Use a reasonable TTL (24 hours by default)
 	ttl := 24 * time.Hour
-	err := m.storage.CleanupOldConversations(nil, ttl)
+	err := m.storage.CleanupOldConversations(context.TODO(), ttl)
 	if err != nil {
 		return fmt.Errorf("failed to cleanup old conversations: %w", err)
 	}
