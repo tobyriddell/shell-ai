@@ -91,6 +91,7 @@ In interactive mode:
 - Use `/clear` to clear conversation history
 - Use `/help` for available commands
 - Press `Ctrl-D` to exit
+- Prompt displays live context usage (e.g., `[████░░░░░] 50% 🤖 AI>`) so you know when you're nearing limits.
 
 ### One-shot Queries
 
@@ -131,6 +132,12 @@ ai-fix     # Fix last failed command
 - `Ctrl-A + E` - Explain current pane output
 - `Ctrl-A + X` - Show AI context
 - `Ctrl-A + C` - AI copy manager (interactive mode)
+
+**Interactive Slash Commands:**
+- `/context` – Show the fully gathered context block
+- `/context-usage` – Show current context usage (size + percentage + bar)
+- `/context-max <bytes|KB|MB>` – Update the max context size on the fly (persists to config)
+- `/stats` – Detailed context stats (tokens, size, messages)
 
 ## 🔧 Configuration
 
