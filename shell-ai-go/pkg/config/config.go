@@ -25,6 +25,7 @@ type Settings struct {
 	AutoCopy           bool   `yaml:"auto_copy"`
 	AutoCopyPrompt     bool   `yaml:"auto_copy_prompt"`
 	DefaultProvider    string `yaml:"default_provider"`
+	DefaultPrompt      string `yaml:"default_prompt"` // Default prompt appended to user queries
 	MaxHistoryLines    int    `yaml:"max_history_lines"`
 	MaxPaneLines       int    `yaml:"max_pane_lines"`
 	MaxPaneContextSize int    `yaml:"max_pane_context_size"` // Max total size (bytes) for all pane content
@@ -73,6 +74,7 @@ func InitConfig(cfgFile string) {
 	// Set defaults
 	viper.SetDefault("settings.auto_copy", false)
 	viper.SetDefault("settings.auto_copy_prompt", true)
+	viper.SetDefault("settings.default_prompt", "Please provide a helpful response. If you're suggesting shell commands, format them clearly so they can be easily copied and executed.")
 	viper.SetDefault("settings.max_history_lines", 50)
 	viper.SetDefault("settings.max_pane_lines", 100)
 	viper.SetDefault("settings.max_pane_context_size", 20000) // 20KB default for all pane content
@@ -144,6 +146,9 @@ func LoadConfig() (*Config, error) {
 			}
 			if truncationStrategy, ok := settingsMap["truncation_strategy"].(string); ok && truncationStrategy != "" {
 				config.Settings.TruncationStrategy = truncationStrategy
+			}
+			if defaultPrompt, ok := settingsMap["default_prompt"].(string); ok && defaultPrompt != "" {
+				config.Settings.DefaultPrompt = defaultPrompt
 			}
 		}
 	}
@@ -293,6 +298,7 @@ func NewDefaultSettings() *Settings {
 	return &Settings{
 		AutoCopy:            false,
 		AutoCopyPrompt:      true,
+		DefaultPrompt:       "Please provide a helpful response. If you're suggesting shell commands, format them clearly so they can be easily copied and executed.",
 		MaxHistoryLines:     50,
 		MaxPaneLines:        100,
 		MaxPaneContextSize:  20000,

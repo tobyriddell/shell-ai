@@ -8,6 +8,7 @@ import (
 	"shell-ai-go/pkg/ai"
 	"shell-ai-go/pkg/config"
 	"shell-ai-go/pkg/contextgather"
+	"shell-ai-go/pkg/debug"
 	"shell-ai-go/pkg/response"
 	"shell-ai-go/pkg/tmux"
 
@@ -36,6 +37,9 @@ func NewOneShot(cfg *config.Config, tmuxClient *tmux.Client) *OneShot {
 		success:   lipgloss.NewStyle().Foreground(lipgloss.Color("10")),
 		command:   lipgloss.NewStyle().Foreground(lipgloss.Color("13")).Bold(true),
 	}
+
+	// Initialize debug logger
+	debug.Init()
 
 	return &OneShot{
 		config:          cfg,
@@ -78,9 +82,27 @@ func (o *OneShot) Ask(prompt string) error {
 	// Format context (no conversation history for one-shot)
 	contextStr := o.contextGatherer.FormatContext(ctx, nil)
 
-	// Create full prompt
-	fullPrompt := contextStr + "\n=== USER PROMPT ===\n" + prompt +
-		"\n\nPlease provide a helpful response. If you're suggesting shell commands, format them clearly so they can be easily copied and executed."
+	// Log context for debugging
+	debug.LogContext(ctx)
+
+	// Log conversation summary for debugging (oneshot has no conversation history)
+	debug.LogConversationSummary("oneshot", 0, []interface{}{})
+
+	// Create full prompt using configurable default prompt
+	defaultPrompt := o.config.Settings.DefaultPrompt
+	if defaultPrompt == "" {
+		defaultPrompt = "Please provide a helpful response. If you're suggesting shell commands, format them clearly so they can be easily copied and executed."
+	}
+	fullPrompt := contextStr + "\n=== USER PROMPT ===\n" + prompt + "\n\n" + defaultPrompt
+
+	// Get provider name for logging
+	providerName := "unknown"
+	if provider, err := o.aiManager.GetActiveProvider(); err == nil {
+		providerName = provider.Name()
+	}
+
+	// Log prompt for debugging
+	debug.LogPrompt("oneshot", providerName, fullPrompt)
 
 	// Send to AI
 	response, err := o.aiManager.Chat(context.Background(), "oneshot", fullPrompt)

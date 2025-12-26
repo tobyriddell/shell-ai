@@ -190,13 +190,15 @@ providers:
 settings:
   auto_copy: false
   auto_copy_prompt: true
+  default_prompt: "Please provide a helpful response. If you're suggesting shell commands, format them clearly so they can be easily copied and executed."
   max_history_lines: 50
   max_pane_lines: 100              # Maximum lines captured per tmux pane
   max_pane_context_size: 20000     # Maximum total size (bytes) for all pane content combined
   conversation_ttl_hours: 24
 ```
 
-**Context Size Settings:**
+**Settings:**
+- `default_prompt`: The default prompt appended to all user queries (default: "Please provide a helpful response. If you're suggesting shell commands, format them clearly so they can be easily copied and executed."). Customize this to change how the AI responds to your queries.
 - `max_pane_lines`: Maximum number of lines captured from each tmux pane (default: 100). Applied per pane before the total size limit.
 - `max_pane_context_size`: Maximum total size in bytes for all tmux pane content combined (default: 20000 = 20KB). Panes from the current window are prioritized over panes from other windows.
 
@@ -270,6 +272,31 @@ setopt nonomatch  # Prevent zsh from failing on unmatched glob patterns
 ```bash
 ai "What is the speed of light?"
 ```
+
+## 🐛 Debug Mode
+
+Shell AI includes a compile-time debug mode that logs all prompts, context, and conversation summaries to `~/.config/shell-ai/debug.log`.
+
+To build with debug mode enabled:
+
+```bash
+cd shell-ai-go
+make build-debug
+```
+
+Or manually:
+
+```bash
+cd shell-ai-go
+go build -tags debug -o build/shell-ai ./cmd/shell-ai
+```
+
+When debug mode is enabled, the following information is logged to `~/.config/shell-ai/debug.log`:
+- **All prompts**: Complete prompts sent to the LLM, including context and user queries
+- **Context data**: System information, shell history, tmux pane content, and environment variables
+- **Conversation summaries**: Current conversation state with message counts and previews
+
+Debug logging is disabled by default and has no performance impact when not compiled with the `debug` tag.
 
 ## 🧪 Testing
 

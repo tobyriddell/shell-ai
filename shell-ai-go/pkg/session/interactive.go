@@ -15,6 +15,7 @@ import (
 	"shell-ai-go/pkg/config"
 	"shell-ai-go/pkg/contextgather"
 	"shell-ai-go/pkg/contextmgmt"
+	"shell-ai-go/pkg/debug"
 	"shell-ai-go/pkg/input"
 	"shell-ai-go/pkg/response"
 	"shell-ai-go/pkg/storage"
@@ -72,23 +73,25 @@ func NewInteractiveSession(cfg *config.Config, tmuxClient *tmux.Client) *Interac
 	// Create AI manager
 	aiManager := cfg.CreateAIManager()
 
-	// Enable storage if configured
+	// Always enable storage for interactive sessions (required for conversation persistence)
 	var storageInstance storage.Storage
-	if cfg.Settings.EnableStorage {
-		storage, err := storage.NewSQLiteStorage()
-		if err != nil {
-			fmt.Printf("Warning: Failed to initialize storage: %v\n", err)
-		} else {
-			storageInstance = storage
-			storageAdapter := ai.NewStorageAdapter(storage)
-			aiManager.SetStorageAdapter(storageAdapter)
-			aiManager.SetUseStorage(true)
-		}
+	storage, err := storage.NewSQLiteStorage()
+	if err != nil {
+		fmt.Printf("Warning: Failed to initialize storage: %v\n", err)
+		fmt.Printf("Warning: Conversation persistence and commands like /list, /load, /delete will not be available\n")
+	} else {
+		storageInstance = storage
+		storageAdapter := ai.NewStorageAdapter(storage)
+		aiManager.SetStorageAdapter(storageAdapter)
+		aiManager.SetUseStorage(true)
 	}
 
 	// Create context manager
 	contextLimits := cfg.CreateContextLimits()
 	contextManager := contextmgmt.NewManager(contextLimits, storageInstance)
+
+	// Initialize debug logger
+	debug.Init()
 
 	return &InteractiveSession{
 		config:          cfg,
@@ -105,6 +108,9 @@ func NewInteractiveSession(cfg *config.Config, tmuxClient *tmux.Client) *Interac
 
 // Run starts the interactive session
 func (s *InteractiveSession) Run() error {
+	// Ensure debug logger is closed on exit
+	defer debug.Close()
+
 	// Ensure readline manager is cleaned up on exit
 	if s.readlineManager != nil {
 		defer s.readlineManager.Close()
@@ -329,9 +335,39 @@ func (s *InteractiveSession) processQuery(query string) error {
 	contextLimits := s.config.CreateContextLimits()
 	contextStr := s.contextGatherer.FormatContextWithLimits(ctx, processedConversation, contextLimits)
 
-	// Create full prompt
-	fullPrompt := contextStr + "\n=== USER PROMPT ===\n" + query +
-		"\n\nPlease provide a helpful response. If you're suggesting shell commands, format them clearly so they can be easily copied and executed."
+	// Log context for debugging
+	debug.LogContext(ctx)
+
+	// Log conversation summary for debugging
+	messages := make([]interface{}, len(processedConversation.Messages))
+	for i, msg := range processedConversation.Messages {
+		contentPreview := msg.Content
+		if len(contentPreview) > 100 {
+			contentPreview = contentPreview[:100] + "..."
+		}
+		messages[i] = map[string]interface{}{
+			"role":    string(msg.Role),
+			"content": contentPreview,
+			"time":    msg.Timestamp.Format(time.RFC3339),
+		}
+	}
+	debug.LogConversationSummary(s.conversationID, len(processedConversation.Messages), messages)
+
+	// Create full prompt using configurable default prompt
+	defaultPrompt := s.config.Settings.DefaultPrompt
+	if defaultPrompt == "" {
+		defaultPrompt = "Please provide a helpful response. If you're suggesting shell commands, format them clearly so they can be easily copied and executed."
+	}
+	fullPrompt := contextStr + "\n=== USER PROMPT ===\n" + query + "\n\n" + defaultPrompt
+
+	// Get provider name for logging
+	providerName := "unknown"
+	if provider, err := s.aiManager.GetActiveProvider(); err == nil {
+		providerName = provider.Name()
+	}
+
+	// Log prompt for debugging
+	debug.LogPrompt(s.conversationID, providerName, fullPrompt)
 
 	// Show thinking indicator
 	fmt.Print(s.styles.system.Render("Thinking... "))
@@ -465,7 +501,16 @@ func (s *InteractiveSession) listConversations() {
 
 	summaries, err := s.aiManager.ListConversations(20, 0)
 	if err != nil {
-		fmt.Println(s.styles.error.Render(fmt.Sprintf("Error listing conversations: %v", err)))
+		if err.Error() == "storage not available" {
+			fmt.Println(s.styles.error.Render("Storage is not available. This may happen if:"))
+			fmt.Println(s.styles.error.Render("  - The database file could not be created"))
+			fmt.Println(s.styles.error.Render("  - There are permission issues with ~/.config/shell-ai/"))
+			fmt.Println(s.styles.error.Render("  - Storage initialization failed during session startup"))
+			fmt.Println()
+			fmt.Println(s.styles.system.Render("Check the startup warnings for more details."))
+		} else {
+			fmt.Println(s.styles.error.Render(fmt.Sprintf("Error listing conversations: %v", err)))
+		}
 		return
 	}
 
@@ -508,7 +553,12 @@ func (s *InteractiveSession) loadConversation(id string) {
 	// Load conversation from storage
 	storageAdapter := s.aiManager.GetStorageAdapter()
 	if storageAdapter == nil {
-		fmt.Println(s.styles.error.Render("Storage not available"))
+		fmt.Println(s.styles.error.Render("Storage is not available. This may happen if:"))
+		fmt.Println(s.styles.error.Render("  - The database file could not be created"))
+		fmt.Println(s.styles.error.Render("  - There are permission issues with ~/.config/shell-ai/"))
+		fmt.Println(s.styles.error.Render("  - Storage initialization failed during session startup"))
+		fmt.Println()
+		fmt.Println(s.styles.system.Render("Check the startup warnings for more details."))
 		return
 	}
 
@@ -546,7 +596,16 @@ func (s *InteractiveSession) deleteConversation(id string) {
 
 	err := s.aiManager.DeleteConversation(id)
 	if err != nil {
-		fmt.Println(s.styles.error.Render(fmt.Sprintf("Error deleting conversation: %v", err)))
+		if err.Error() == "storage not available" {
+			fmt.Println(s.styles.error.Render("Storage is not available. This may happen if:"))
+			fmt.Println(s.styles.error.Render("  - The database file could not be created"))
+			fmt.Println(s.styles.error.Render("  - There are permission issues with ~/.config/shell-ai/"))
+			fmt.Println(s.styles.error.Render("  - Storage initialization failed during session startup"))
+			fmt.Println()
+			fmt.Println(s.styles.system.Render("Check the startup warnings for more details."))
+		} else {
+			fmt.Println(s.styles.error.Render(fmt.Sprintf("Error deleting conversation: %v", err)))
+		}
 		return
 	}
 
@@ -843,6 +902,9 @@ func (s *InteractiveSession) RunWithInitialQuestion(initialQuestion string) erro
 	if initialQuestion == "" {
 		return s.Run()
 	}
+
+	// Ensure debug logger is closed on exit
+	defer debug.Close()
 
 	// Ensure readline manager is cleaned up on exit
 	if s.readlineManager != nil {
