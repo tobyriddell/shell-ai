@@ -11,10 +11,6 @@ help: ## Show this help message
 	@echo "Available targets:"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-.PHONY: build
-build: ## Build the Go binary
-	@$(MAKE) -C shell-ai-go build
-
 .PHONY: install
 install: build ## Install shell-ai binary and configuration
 	@echo "Installing Shell AI..."
@@ -68,10 +64,6 @@ install-system: build ## Install shell-ai binary system-wide (requires sudo)
 	@echo ""
 	@echo "✓ Installation complete!"
 
-.PHONY: test
-test: ## Run Go implementation tests
-	@$(MAKE) -C shell-ai-go test
-
 .PHONY: clean
 clean: ## Clean build artifacts
 	@$(MAKE) -C shell-ai-go clean
@@ -83,3 +75,8 @@ check: ## Check if dependencies exist
 	@test -d shell-ai-go && echo "✓ shell-ai-go directory exists" || echo "✗ shell-ai-go directory missing"
 	@test -d config && echo "✓ config/ directory exists" || echo "✗ config/ directory missing"
 	@command -v go >/dev/null 2>&1 && echo "✓ Go available" || echo "✗ Go not found"
+
+# Pattern rule: delegate any other target to shell-ai-go Makefile
+# This catches: build, test, test-tmux, test-atuin, test-all, deps, build-release, build-debug, etc.
+%:
+	@$(MAKE) -C shell-ai-go $@

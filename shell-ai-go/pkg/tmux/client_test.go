@@ -8,6 +8,16 @@ import (
 )
 
 func TestClient_IsInTmux(t *testing.T) {
+	// Save original TMUX value to restore later
+	originalTmux := os.Getenv("TMUX")
+	defer func() {
+		if originalTmux != "" {
+			os.Setenv("TMUX", originalTmux)
+		} else {
+			os.Unsetenv("TMUX")
+		}
+	}()
+
 	// Test without TMUX environment variable
 	os.Unsetenv("TMUX")
 	client := NewClient()
@@ -17,7 +27,6 @@ func TestClient_IsInTmux(t *testing.T) {
 
 	// Test with TMUX environment variable set
 	os.Setenv("TMUX", "/tmp/tmux-1000/default,12345,0")
-	defer os.Unsetenv("TMUX")
 	client2 := NewClient()
 	if !client2.IsInTmux() {
 		t.Error("Expected IsInTmux to return true when TMUX env var is set")
@@ -40,6 +49,16 @@ func TestTmuxPane_DisplayName(t *testing.T) {
 }
 
 func TestClient_GetCurrentPaneID_NotInTmux(t *testing.T) {
+	// Save original TMUX value to restore later
+	originalTmux := os.Getenv("TMUX")
+	defer func() {
+		if originalTmux != "" {
+			os.Setenv("TMUX", originalTmux)
+		} else {
+			os.Unsetenv("TMUX")
+		}
+	}()
+
 	os.Unsetenv("TMUX")
 	client := NewClient()
 
@@ -50,6 +69,16 @@ func TestClient_GetCurrentPaneID_NotInTmux(t *testing.T) {
 }
 
 func TestClient_GetPanes_NotInTmux(t *testing.T) {
+	// Save original TMUX value to restore later
+	originalTmux := os.Getenv("TMUX")
+	defer func() {
+		if originalTmux != "" {
+			os.Setenv("TMUX", originalTmux)
+		} else {
+			os.Unsetenv("TMUX")
+		}
+	}()
+
 	os.Unsetenv("TMUX")
 	client := NewClient()
 
@@ -60,6 +89,16 @@ func TestClient_GetPanes_NotInTmux(t *testing.T) {
 }
 
 func TestClient_SelectPane_NotInTmux(t *testing.T) {
+	// Save original TMUX value to restore later
+	originalTmux := os.Getenv("TMUX")
+	defer func() {
+		if originalTmux != "" {
+			os.Setenv("TMUX", originalTmux)
+		} else {
+			os.Unsetenv("TMUX")
+		}
+	}()
+
 	os.Unsetenv("TMUX")
 	client := NewClient()
 
@@ -70,6 +109,16 @@ func TestClient_SelectPane_NotInTmux(t *testing.T) {
 }
 
 func TestClient_SendToPane_NotInTmux(t *testing.T) {
+	// Save original TMUX value to restore later
+	originalTmux := os.Getenv("TMUX")
+	defer func() {
+		if originalTmux != "" {
+			os.Setenv("TMUX", originalTmux)
+		} else {
+			os.Unsetenv("TMUX")
+		}
+	}()
+
 	os.Unsetenv("TMUX")
 	client := NewClient()
 
@@ -80,6 +129,16 @@ func TestClient_SendToPane_NotInTmux(t *testing.T) {
 }
 
 func TestClient_SendCommandsToPane_NotInTmux(t *testing.T) {
+	// Save original TMUX value to restore later
+	originalTmux := os.Getenv("TMUX")
+	defer func() {
+		if originalTmux != "" {
+			os.Setenv("TMUX", originalTmux)
+		} else {
+			os.Unsetenv("TMUX")
+		}
+	}()
+
 	os.Unsetenv("TMUX")
 	client := NewClient()
 
@@ -94,6 +153,16 @@ func TestClient_SendCommandsToPane_NotInTmux(t *testing.T) {
 }
 
 func TestClient_CapturePaneContent_NotInTmux(t *testing.T) {
+	// Save original TMUX value to restore later
+	originalTmux := os.Getenv("TMUX")
+	defer func() {
+		if originalTmux != "" {
+			os.Setenv("TMUX", originalTmux)
+		} else {
+			os.Unsetenv("TMUX")
+		}
+	}()
+
 	os.Unsetenv("TMUX")
 	client := NewClient()
 

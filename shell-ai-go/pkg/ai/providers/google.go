@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptrace"
 	"time"
 
 	"shell-ai-go/pkg/ai"
@@ -133,6 +134,11 @@ func (p *GoogleProvider) Chat(ctx context.Context, conversation *ai.Conversation
 	}
 
 	url := fmt.Sprintf("%s/models/%s:generateContent?key=%s", p.config.BaseURL, p.config.Model, p.config.APIKey)
+
+	// Create HTTP trace to measure all connection phases
+	trace := &httptrace.ClientTrace{}
+
+	ctx = httptrace.WithClientTrace(ctx, trace)
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(reqBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -140,7 +146,15 @@ func (p *GoogleProvider) Chat(ctx context.Context, conversation *ai.Conversation
 
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 30 * time.Second}
+	// Create HTTP client with explicit transport to ensure real network calls
+	transport := &http.Transport{
+		DisableKeepAlives: false, // Allow connection reuse
+	}
+	client := &http.Client{
+		Timeout:   30 * time.Second,
+		Transport: transport,
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
